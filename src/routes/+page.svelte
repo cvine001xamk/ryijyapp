@@ -30,7 +30,6 @@
 		</label>
 	{:else}
 		<div class="rounded-2xl bg-white p-6 shadow-lg" transition:fade>
-			<h2 class="mb-6 text-xl text-gray-600">Kuvan pikselöinti</h2>
 			<ImageControls bind:imageFile />
 			<PixelSettings bind:pixelSize bind:borderColor />
 			<CanvasArea {imageFile} {pixelSize} {borderColor} />

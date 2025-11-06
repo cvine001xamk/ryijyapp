@@ -24,7 +24,7 @@
 		<!-- Header -->
 		<div class="sticky top-0 border-b bg-white/50 p-4 shadow-sm">
 			<div class="mx-auto flex max-w-3xl items-center justify-between">
-				<h2 class="text-xl font-semibold text-gray-800">Kaavion oletusasetukset</h2>
+				<h2 class=" text-xl font-semibold text-gray-800">Kaavion oletusasetukset</h2>
 				<button
 					on:click={onClose}
 					class="rounded-full p-2 text-gray-600 hover:bg-black/10"

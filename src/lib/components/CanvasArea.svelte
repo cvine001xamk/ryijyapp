@@ -151,7 +151,7 @@
 		const outputHeight = Math.ceil(originalCanvas.height / blockSize) * blockSize;
 		const cols = outputWidth / blockSize;
 		const rows = Math.ceil(originalCanvas.height / blockSize);
-		gridInfo = `${cols} × ${rows} squares`;
+		gridInfo = `${cols} × ${rows} ruutua`;
 
 		processedCanvas.width = outputWidth + 30;
 		processedCanvas.height = outputHeight + 30;
@@ -222,6 +222,9 @@
 		}
 	}
 
+	const THREAD_LENGTH_PER_KNOT = 24; // cm per knot
+	const THREADS_PER_KNOT = 4; // number of threads per knot
+
 	function saveImage(): void {
 		if (!processedCanvas?.width) {
 			alert('No processed image!');
@@ -261,6 +264,9 @@
 				yPosition = 20;
 			}
 
+			const totalThreads = count * THREADS_PER_KNOT;
+			const totalLength = (count * THREAD_LENGTH_PER_KNOT * THREADS_PER_KNOT) / 100; // Convert to meters
+
 			// Draw color rectangle
 			const rgb = hexToRgb(hex);
 			if (rgb) {
@@ -268,11 +274,31 @@
 				pdf.rect(20, yPosition - 5, 10, 10, 'F');
 			}
 
-			// Add color information
+			// Add color information with thread calculations
 			const identifier = displayMode !== 'color' ? `(${colorToIdentifier.get(hex) || ''}) ` : '';
-			pdf.text(`${identifier}${hex} - ${count} ruutua`, 35, yPosition);
+			pdf.text(
+				`${identifier}${hex} - ${count} ruutua - ${totalThreads} lankaa (${totalLength.toFixed(1)} m)`,
+				35,
+				yPosition
+			);
 			yPosition += 15;
 		}
+
+		// Calculate and add total threads needed
+		const totalKnots = Array.from(colorCounts.values()).reduce((sum, count) => sum + count, 0);
+		const totalThreadCount = totalKnots * THREADS_PER_KNOT;
+		const totalThreadLength = (totalKnots * THREAD_LENGTH_PER_KNOT * THREADS_PER_KNOT) / 100;
+
+		yPosition += 10;
+		pdf.setFontSize(14);
+		pdf.text('Yhteensä:', 20, yPosition);
+		yPosition += 10;
+		pdf.setFontSize(12);
+		pdf.text(`Solmuja: ${totalKnots}`, 20, yPosition);
+		yPosition += 8;
+		pdf.text(`Lankoja: ${totalThreadCount}`, 20, yPosition);
+		yPosition += 8;
+		pdf.text(`Lankojen kokonaispituus: ${totalThreadLength.toFixed(1)} m`, 20, yPosition);
 
 		// Save the PDF
 		pdf.save('ryijykaavio.pdf');
