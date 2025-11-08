@@ -64,6 +64,15 @@
 	}
 
 	function loadImage(file: File) {
+		isProcessed = false;
+		gridInfo = '';
+		colorCounts = new Map();
+		colorToIdentifier = new Map();
+		const pctx = processedCanvas?.getContext('2d');
+		if (pctx) {
+			pctx.clearRect(0, 0, processedCanvas.width, processedCanvas.height);
+		}
+
 		const reader = new FileReader();
 		reader.onload = (e) => {
 			if (!img) img = new Image();
@@ -309,17 +318,17 @@
 		on:process={processImage}
 		on:save={save}
 		bind:showOriginal
+		{isProcessed}
 	/>
-
-	{#if gridInfo && !showOriginal}
-		<p class="text-sm text-gray-700">{gridInfo}</p>
-	{/if}
 
 	<canvas
 		bind:this={processedCanvas}
 		class="w-full max-w-3xl rounded border shadow"
 		class:hidden={showOriginal}
 	></canvas>
+	{#if gridInfo && !showOriginal}
+		<p class="text-sm text-gray-700">{gridInfo}</p>
+	{/if}
 	{#if img}
 		<img
 			src={img.src}
