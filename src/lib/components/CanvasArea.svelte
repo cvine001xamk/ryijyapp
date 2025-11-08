@@ -2,9 +2,10 @@
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
 	import ColorPalette from './ColorPalette.svelte';
-	import { jsPDF } from 'jspdf';
 	import { rgbToHex, hexToRgb, getBrightness } from '$lib/utils/helperFunctions';
 	import type { RGB } from '$lib/utils/helperFunctions';
+	import { generatePdf } from '$lib/utils/pdfGenerator';
+	import CanvasControls from './CanvasControls.svelte';
 
 	export let imageFile: File | null;
 	export let pixelSize: number;
@@ -25,7 +26,8 @@
 	let nextLetter = 'A';
 
 	const NUMBER_FONT_SIZE = 12;
-	const NUMBER_MARGIN_BOTTOM = 15;
+	const BOLD_LINE_WIDTH = 2;
+	const NORMAL_LINE_WIDTH = 1;
 	const NUMBER_TEXT_COLOR = 'black';
 
 	function getIdentifierForColor(hex: string): string {
@@ -133,6 +135,104 @@
 		return primaryColor;
 	}
 
+	function fillCells(
+		pctx: CanvasRenderingContext2D,
+		pixels: Uint8ClampedArray,
+		rows: number,
+		cols: number,
+		blockSize: number
+	) {
+		for (let r = 0; r < rows; r++) {
+			for (let c = 0; c < cols; c++) {
+				const x = c * blockSize;
+				const y = r * blockSize;
+				const color = getRepresentativeColorInBlock(
+					pixels,
+					x,
+					y,
+					blockSize,
+					originalCanvas.width,
+					originalCanvas.height
+				);
+				const hex = rgbToHex(color.r, color.g, color.b);
+				colorCounts.set(hex, (colorCounts.get(hex) || 0) + 1);
+
+				if (displayMode === 'color') {
+					pctx.fillStyle = `rgb(${color.r}, ${color.g}, ${color.b})`;
+					pctx.fillRect(x, y, blockSize, blockSize);
+				} else {
+					pctx.fillStyle = 'white';
+					pctx.fillRect(x, y, blockSize, blockSize);
+
+					const identifier = getIdentifierForColor(hex);
+					pctx.fillStyle = 'black';
+					pctx.font = `${Math.max(12, blockSize * 0.5)}px Arial`;
+					pctx.textAlign = 'center';
+					pctx.textBaseline = 'middle';
+					pctx.fillText(identifier, x + blockSize / 2, y + blockSize / 2);
+				}
+			}
+		}
+	}
+
+	function drawGrid(
+		pctx: CanvasRenderingContext2D,
+		rows: number,
+		cols: number,
+		blockSize: number,
+		outputWidth: number,
+		outputHeight: number
+	) {
+		pctx.strokeStyle = borderColor;
+		for (let c = 0; c <= cols; c++) {
+			pctx.lineWidth = c % 5 === 0 ? BOLD_LINE_WIDTH : NORMAL_LINE_WIDTH;
+			pctx.beginPath();
+			pctx.moveTo(c * blockSize, 0);
+			pctx.lineTo(c * blockSize, outputHeight);
+			pctx.stroke();
+		}
+		for (let r = 0; r <= rows; r++) {
+			pctx.lineWidth = (rows - r) % 5 === 0 ? BOLD_LINE_WIDTH : NORMAL_LINE_WIDTH;
+			pctx.beginPath();
+			pctx.moveTo(0, r * blockSize);
+			pctx.lineTo(outputWidth, r * blockSize);
+			pctx.stroke();
+		}
+	}
+
+	function drawNumbering(
+		pctx: CanvasRenderingContext2D,
+		rows: number,
+		cols: number,
+		blockSize: number,
+		outputWidth: number,
+		outputHeight: number
+	) {
+		pctx.fillStyle = NUMBER_TEXT_COLOR;
+		pctx.font = `${NUMBER_FONT_SIZE}px Arial`;
+		pctx.textAlign = 'center';
+		pctx.textBaseline = 'top';
+
+		for (let col = 1; col <= cols; col++) {
+			if (col % 10 === 0) {
+				const xPos = (col - 1) * blockSize + blockSize / 2;
+				const yPos = outputHeight + 5;
+				pctx.fillText(col.toString(), xPos, yPos);
+			}
+		}
+
+		pctx.textAlign = 'left';
+		pctx.textBaseline = 'middle';
+		for (let row = 1; row <= rows; row++) {
+			const rowFromBottom = rows - row + 1;
+			if (rowFromBottom % 10 === 0) {
+				const xPos = outputWidth + 5;
+				const yPos = (row - 1) * blockSize + blockSize / 2;
+				pctx.fillText(rowFromBottom.toString(), xPos, yPos);
+			}
+		}
+	}
+
 	function processImage(): void {
 		if (!img?.src || !isImageLoaded) {
 			alert('Please load an image first!');
@@ -147,10 +247,10 @@
 		let blockSize = Math.floor(originalCanvas.width / desired);
 		if (blockSize < 1) blockSize = 1;
 
-		const outputWidth = Math.ceil(originalCanvas.width / blockSize) * blockSize;
-		const outputHeight = Math.ceil(originalCanvas.height / blockSize) * blockSize;
-		const cols = outputWidth / blockSize;
-		const rows = Math.ceil(originalCanvas.height / blockSize);
+		const cols = Math.floor(originalCanvas.width / blockSize);
+		const rows = Math.floor(originalCanvas.height / blockSize);
+		const outputWidth = cols * blockSize;
+		const outputHeight = rows * blockSize;
 		gridInfo = `${cols} × ${rows} ruutua`;
 
 		processedCanvas.width = outputWidth + 30;
@@ -164,180 +264,30 @@
 		nextNumber = 1;
 		nextLetter = 'A';
 
-		for (let y = 0; y < outputHeight; y += blockSize) {
-			for (let x = 0; x < outputWidth; x += blockSize) {
-				const c = getRepresentativeColorInBlock(
-					pixels,
-					x,
-					y,
-					blockSize,
-					originalCanvas.width,
-					originalCanvas.height
-				);
-				const hex = rgbToHex(c.r, c.g, c.b);
-				colorCounts.set(hex, (colorCounts.get(hex) || 0) + 1);
-
-				if (displayMode === 'color') {
-					pctx.fillStyle = `rgb(${c.r}, ${c.g}, ${c.b})`;
-					pctx.fillRect(x, y, blockSize, blockSize);
-				} else {
-					pctx.fillStyle = 'white';
-					pctx.fillRect(x, y, blockSize, blockSize);
-
-					// Draw identifier
-					const identifier = getIdentifierForColor(hex);
-					pctx.fillStyle = 'black';
-					pctx.font = `${Math.max(12, blockSize * 0.5)}px Arial`;
-					pctx.textAlign = 'center';
-					pctx.textBaseline = 'middle';
-					pctx.fillText(identifier, x + blockSize / 2, y + blockSize / 2);
-				}
-
-				pctx.strokeStyle = borderColor;
-				pctx.lineWidth = 1;
-				pctx.strokeRect(x, y, blockSize, blockSize);
-			}
-		}
-
-		// Draw numbering
-		pctx.fillStyle = NUMBER_TEXT_COLOR;
-		pctx.font = `${NUMBER_FONT_SIZE}px Arial`;
-		pctx.textAlign = 'center';
-		pctx.textBaseline = 'top';
-
-		for (let col = 1; col <= cols; col++) {
-			if (col === 1 || col % 10 === 0) {
-				const xPos = (col - 1) * blockSize + blockSize / 2;
-				const yPos = outputHeight + NUMBER_MARGIN_BOTTOM;
-				pctx.fillText(col.toString(), xPos, yPos);
-			}
-		}
-
-		for (let row = 1; row <= rows; row++) {
-			if (row === 1 || row % 10 === 0) {
-				const xPos = outputWidth + 15;
-				const yPos = outputHeight - (row - 1) * blockSize - blockSize / 2;
-				pctx.fillText(row.toString(), xPos, yPos);
-			}
-		}
+		fillCells(pctx, pixels, rows, cols, blockSize);
+		drawGrid(pctx, rows, cols, blockSize, outputWidth, outputHeight);
+		drawNumbering(pctx, rows, cols, blockSize, outputWidth, outputHeight);
 	}
 
-	const THREAD_LENGTH_PER_KNOT = 24; // cm per knot
-	const THREADS_PER_KNOT = 4; // number of threads per knot
-
-	function saveImage(): void {
-		if (!processedCanvas?.width) {
-			alert('No processed image!');
-			return;
-		}
-
-		const pdf = new jsPDF();
-		const pageWidth = pdf.internal.pageSize.getWidth();
-		const pageHeight = pdf.internal.pageSize.getHeight();
-
-		// Add title
-		pdf.setFontSize(20);
-		pdf.text('Ryijykaavio', pageWidth / 2, 15, { align: 'center' });
-
-		// Add grid size info
-		pdf.setFontSize(12);
-		pdf.text(`Ruudukko: ${gridInfo}`, 20, 25);
-
-		// Add processed image
-		const imgData = processedCanvas.toDataURL('image/png');
-		const imgWidth = Math.min(pageWidth - 40, 170); // Max width with margins
-		const imgHeight = (processedCanvas.height * imgWidth) / processedCanvas.width;
-		pdf.addImage(imgData, 'PNG', 20, 35, imgWidth, imgHeight);
-
-		// Add color information
-		let yPosition = imgHeight + 50;
-		pdf.setFontSize(14);
-		pdf.text('Käytetyt värit:', 20, yPosition);
-		yPosition += 10;
-
-		// Add color swatches and information
-		pdf.setFontSize(12);
-		for (const [hex, count] of colorCounts.entries()) {
-			// Check if we need a new page
-			if (yPosition > pageHeight - 20) {
-				pdf.addPage();
-				yPosition = 20;
-			}
-
-			const totalThreads = count * THREADS_PER_KNOT;
-			const totalLength = (count * THREAD_LENGTH_PER_KNOT * THREADS_PER_KNOT) / 100; // Convert to meters
-
-			// Draw color rectangle
-			const rgb = hexToRgb(hex);
-			if (rgb) {
-				pdf.setFillColor(rgb.r, rgb.g, rgb.b);
-				pdf.rect(20, yPosition - 5, 10, 10, 'F');
-			}
-
-			// Add color information with thread calculations
-			const identifier = displayMode !== 'color' ? `(${colorToIdentifier.get(hex) || ''}) ` : '';
-			pdf.text(
-				`${identifier}${hex} - ${count} ruutua - ${totalThreads} lankaa (${totalLength.toFixed(1)} m)`,
-				35,
-				yPosition
-			);
-			yPosition += 15;
-		}
-
-		// Calculate and add total threads needed
-		const totalKnots = Array.from(colorCounts.values()).reduce((sum, count) => sum + count, 0);
-		const totalThreadCount = totalKnots * THREADS_PER_KNOT;
-		const totalThreadLength = (totalKnots * THREAD_LENGTH_PER_KNOT * THREADS_PER_KNOT) / 100;
-
-		yPosition += 10;
-		pdf.setFontSize(14);
-		pdf.text('Yhteensä:', 20, yPosition);
-		yPosition += 10;
-		pdf.setFontSize(12);
-		pdf.text(`Solmuja: ${totalKnots}`, 20, yPosition);
-		yPosition += 8;
-		pdf.text(`Lankoja: ${totalThreadCount}`, 20, yPosition);
-		yPosition += 8;
-		pdf.text(`Lankojen kokonaispituus: ${totalThreadLength.toFixed(1)} m`, 20, yPosition);
-
-		// Save the PDF
-		pdf.save('ryijykaavio.pdf');
+	function save() {
+		generatePdf({
+			canvas: processedCanvas,
+			gridInfo,
+			colorCounts,
+			colorToIdentifier,
+			displayMode
+		});
 	}
 </script>
 
 <div class="flex flex-col items-center gap-4">
-	<div class="flex gap-3">
-		<button
-			on:click={processImage}
-			class="rounded-lg bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 disabled:bg-gray-300"
-			disabled={!isImageLoaded}
-		>
-			Muodosta kaavio
-		</button>
-
-		{#if processedCanvas?.width}
-			<button
-				on:click={saveImage}
-				class="rounded-lg bg-green-500 px-4 py-2 text-white hover:bg-green-600"
-				disabled={!processedCanvas?.width}
-			>
-				Tallenna kaavio
-			</button>
-			<div class="flex items-center gap-2 rounded-lg border bg-white px-3 py-2 shadow-sm">
-				<span class="text-sm text-gray-700">Näyttötapa:</span>
-				<select
-					bind:value={displayMode}
-					on:change={processImage}
-					class="rounded border-gray-300 text-sm"
-				>
-					<option value="color">Värit</option>
-					<option value="number">Numerot</option>
-					<option value="letter">Kirjaimet</option>
-					<option value="code">Koodit</option>
-				</select>
-			</div>
-		{/if}
-	</div>
+	<CanvasControls
+		{isImageLoaded}
+		processedCanvasWidth={processedCanvas?.width}
+		bind:displayMode
+		on:process={processImage}
+		on:save={save}
+	/>
 
 	{#if gridInfo}
 		<p class="text-sm text-gray-700">{gridInfo}</p>
