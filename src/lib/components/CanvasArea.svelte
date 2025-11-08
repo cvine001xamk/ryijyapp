@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
 	import ColorPalette from './ColorPalette.svelte';
-	import { rgbToHex, hexToRgb, getBrightness } from '$lib/utils/helperFunctions';
+	import { rgbToHex, getBrightness } from '$lib/utils/helperFunctions';
 	import type { RGB } from '$lib/utils/helperFunctions';
 	import { generatePdf } from '$lib/utils/pdfGenerator';
 	import CanvasControls from './CanvasControls.svelte';
@@ -10,6 +10,10 @@
 	export let imageFile: File | null;
 	export let pixelSize: number;
 	export let borderColor: 'black' | 'white';
+	export let aspectRatio = '1:1';
+	export let symbolType: 'kirjaimet' | 'numerot' | 'koodi' | 'ei mitään' = 'ei mitään';
+	export let showColor = true;
+	export let showOriginal = false;
 
 	let originalCanvas: HTMLCanvasElement;
 	let processedCanvas: HTMLCanvasElement;
@@ -17,10 +21,8 @@
 	let gridInfo = '';
 	let img: HTMLImageElement | null = null;
 	let isImageLoaded = false;
+	let isProcessed = false;
 
-	// New display mode related variables
-	type DisplayMode = 'color' | 'number' | 'letter' | 'code';
-	let displayMode: DisplayMode = 'color';
 	let colorToIdentifier = new Map<string, string>();
 	let nextNumber = 1;
 	let nextLetter = 'A';
@@ -28,20 +30,19 @@
 	const NUMBER_FONT_SIZE = 12;
 	const BOLD_LINE_WIDTH = 2;
 	const NORMAL_LINE_WIDTH = 1;
-	const NUMBER_TEXT_COLOR = 'black';
 
-	function getIdentifierForColor(hex: string): string {
+	function getIdentifierForColor(hex: string, type: 'kirjaimet' | 'numerot' | 'koodi'): string {
 		if (!colorToIdentifier.has(hex)) {
-			switch (displayMode) {
-				case 'number':
+			switch (type) {
+				case 'numerot':
 					colorToIdentifier.set(hex, nextNumber.toString());
 					nextNumber++;
 					break;
-				case 'letter':
+				case 'kirjaimet':
 					colorToIdentifier.set(hex, nextLetter);
 					nextLetter = String.fromCharCode(nextLetter.charCodeAt(0) + 1);
 					break;
-				case 'code':
+				case 'koodi':
 					colorToIdentifier.set(hex, hex.substring(1, 4));
 					break;
 			}
@@ -49,9 +50,17 @@
 		return colorToIdentifier.get(hex) || '';
 	}
 
-	// Watch for new image file
 	$: if (browser && imageFile) {
 		loadImage(imageFile);
+	}
+
+	$: if (
+		(pixelSize || borderColor || aspectRatio || symbolType || showColor) &&
+		isProcessed &&
+		browser &&
+		imageFile
+	) {
+		processImage();
 	}
 
 	function loadImage(file: File) {
@@ -67,6 +76,7 @@
 				originalCanvas.height = img!.height;
 				ctx.drawImage(img!, 0, 0);
 				isImageLoaded = true;
+				showOriginal = true;
 			};
 			img.src = e.target?.result as string;
 		};
@@ -77,15 +87,16 @@
 		originalPixels: Uint8ClampedArray,
 		blockX: number,
 		blockY: number,
-		pixelSize: number,
+		blockWidth: number,
+		blockHeight: number,
 		originalWidth: number,
 		originalHeight: number
 	): RGB {
 		const colorCounts: Record<string, number> = {};
 		let totalOpaquePixels = 0;
 
-		for (let dy = 0; dy < pixelSize && blockY + dy < originalHeight; dy++) {
-			for (let dx = 0; dx < pixelSize && blockX + dx < originalWidth; dx++) {
+		for (let dy = 0; dy < blockHeight && blockY + dy < originalHeight; dy++) {
+			for (let dx = 0; dx < blockWidth && blockX + dx < originalWidth; dx++) {
 				const i = ((blockY + dy) * originalWidth + (blockX + dx)) * 4;
 				const r = originalPixels[i];
 				const g = originalPixels[i + 1];
@@ -140,36 +151,40 @@
 		pixels: Uint8ClampedArray,
 		rows: number,
 		cols: number,
-		blockSize: number
+		blockWidth: number,
+		blockHeight: number
 	) {
 		for (let r = 0; r < rows; r++) {
 			for (let c = 0; c < cols; c++) {
-				const x = c * blockSize;
-				const y = r * blockSize;
+				const x = c * blockWidth;
+				const y = r * blockHeight;
 				const color = getRepresentativeColorInBlock(
 					pixels,
 					x,
 					y,
-					blockSize,
+					blockWidth,
+					blockHeight,
 					originalCanvas.width,
 					originalCanvas.height
 				);
 				const hex = rgbToHex(color.r, color.g, color.b);
 				colorCounts.set(hex, (colorCounts.get(hex) || 0) + 1);
 
-				if (displayMode === 'color') {
-					pctx.fillStyle = `rgb(${color.r}, ${color.g}, ${color.b})`;
-					pctx.fillRect(x, y, blockSize, blockSize);
-				} else {
-					pctx.fillStyle = 'white';
-					pctx.fillRect(x, y, blockSize, blockSize);
+				pctx.fillStyle = showColor ? `rgb(${color.r}, ${color.g}, ${color.b})` : 'white';
+				pctx.fillRect(x, y, blockWidth, blockHeight);
 
-					const identifier = getIdentifierForColor(hex);
-					pctx.fillStyle = 'black';
-					pctx.font = `${Math.max(12, blockSize * 0.5)}px Arial`;
+				if (symbolType !== 'ei mitään') {
+					const identifier = getIdentifierForColor(hex, symbolType);
+					if (!showColor) {
+						pctx.fillStyle = 'black';
+					} else {
+						const brightness = getBrightness(color.r, color.g, color.b);
+						pctx.fillStyle = brightness > 128 ? 'black' : 'white';
+					}
+					pctx.font = `${Math.max(12, Math.min(blockWidth, blockHeight) * 0.5)}px Arial`;
 					pctx.textAlign = 'center';
 					pctx.textBaseline = 'middle';
-					pctx.fillText(identifier, x + blockSize / 2, y + blockSize / 2);
+					pctx.fillText(identifier, x + blockWidth / 2, y + blockHeight / 2);
 				}
 			}
 		}
@@ -179,7 +194,8 @@
 		pctx: CanvasRenderingContext2D,
 		rows: number,
 		cols: number,
-		blockSize: number,
+		blockWidth: number,
+		blockHeight: number,
 		outputWidth: number,
 		outputHeight: number
 	) {
@@ -187,15 +203,15 @@
 		for (let c = 0; c <= cols; c++) {
 			pctx.lineWidth = c % 5 === 0 ? BOLD_LINE_WIDTH : NORMAL_LINE_WIDTH;
 			pctx.beginPath();
-			pctx.moveTo(c * blockSize, 0);
-			pctx.lineTo(c * blockSize, outputHeight);
+			pctx.moveTo(c * blockWidth, 0);
+			pctx.lineTo(c * blockWidth, outputHeight);
 			pctx.stroke();
 		}
 		for (let r = 0; r <= rows; r++) {
 			pctx.lineWidth = (rows - r) % 5 === 0 ? BOLD_LINE_WIDTH : NORMAL_LINE_WIDTH;
 			pctx.beginPath();
-			pctx.moveTo(0, r * blockSize);
-			pctx.lineTo(outputWidth, r * blockSize);
+			pctx.moveTo(0, r * blockHeight);
+			pctx.lineTo(outputWidth, r * blockHeight);
 			pctx.stroke();
 		}
 	}
@@ -204,18 +220,19 @@
 		pctx: CanvasRenderingContext2D,
 		rows: number,
 		cols: number,
-		blockSize: number,
+		blockWidth: number,
+		blockHeight: number,
 		outputWidth: number,
 		outputHeight: number
 	) {
-		pctx.fillStyle = NUMBER_TEXT_COLOR;
+		pctx.fillStyle = 'black';
 		pctx.font = `${NUMBER_FONT_SIZE}px Arial`;
 		pctx.textAlign = 'center';
 		pctx.textBaseline = 'top';
 
 		for (let col = 1; col <= cols; col++) {
 			if (col % 10 === 0) {
-				const xPos = (col - 1) * blockSize + blockSize / 2;
+				const xPos = (col - 1) * blockWidth + blockWidth / 2;
 				const yPos = outputHeight + 5;
 				pctx.fillText(col.toString(), xPos, yPos);
 			}
@@ -227,15 +244,15 @@
 			const rowFromBottom = rows - row + 1;
 			if (rowFromBottom % 10 === 0) {
 				const xPos = outputWidth + 5;
-				const yPos = (row - 1) * blockSize + blockSize / 2;
+				const yPos = (row - 1) * blockHeight + blockHeight / 2;
 				pctx.fillText(rowFromBottom.toString(), xPos, yPos);
 			}
 		}
 	}
 
 	function processImage(): void {
+		showOriginal = false;
 		if (!img?.src || !isImageLoaded) {
-			alert('Please load an image first!');
 			return;
 		}
 
@@ -244,13 +261,17 @@
 		if (!ctx || !pctx) return;
 
 		const desired = parseInt(pixelSize.toString());
-		let blockSize = Math.floor(originalCanvas.width / desired);
-		if (blockSize < 1) blockSize = 1;
+		const [widthRatio, heightRatio] = aspectRatio.split(':').map(Number);
 
-		const cols = Math.floor(originalCanvas.width / blockSize);
-		const rows = Math.floor(originalCanvas.height / blockSize);
-		const outputWidth = cols * blockSize;
-		const outputHeight = rows * blockSize;
+		const blockWidth = Math.floor(originalCanvas.width / desired);
+		if (blockWidth < 1) return;
+		const blockHeight = Math.floor(blockWidth * (heightRatio / widthRatio));
+		if (blockHeight < 1) return;
+
+		const cols = Math.floor(originalCanvas.width / blockWidth);
+		const rows = Math.floor(originalCanvas.height / blockHeight);
+		const outputWidth = cols * blockWidth;
+		const outputHeight = rows * blockHeight;
 		gridInfo = `${cols} × ${rows} ruutua`;
 
 		processedCanvas.width = outputWidth + 30;
@@ -264,9 +285,10 @@
 		nextNumber = 1;
 		nextLetter = 'A';
 
-		fillCells(pctx, pixels, rows, cols, blockSize);
-		drawGrid(pctx, rows, cols, blockSize, outputWidth, outputHeight);
-		drawNumbering(pctx, rows, cols, blockSize, outputWidth, outputHeight);
+		fillCells(pctx, pixels, rows, cols, blockWidth, blockHeight);
+		drawGrid(pctx, rows, cols, blockWidth, blockHeight, outputWidth, outputHeight);
+		drawNumbering(pctx, rows, cols, blockWidth, blockHeight, outputWidth, outputHeight);
+		isProcessed = true;
 	}
 
 	function save() {
@@ -275,7 +297,7 @@
 			gridInfo,
 			colorCounts,
 			colorToIdentifier,
-			displayMode
+			symbolType
 		});
 	}
 </script>
@@ -284,16 +306,29 @@
 	<CanvasControls
 		{isImageLoaded}
 		processedCanvasWidth={processedCanvas?.width}
-		bind:displayMode
 		on:process={processImage}
 		on:save={save}
+		bind:showOriginal
 	/>
 
-	{#if gridInfo}
+	{#if gridInfo && !showOriginal}
 		<p class="text-sm text-gray-700">{gridInfo}</p>
 	{/if}
 
-	<canvas bind:this={processedCanvas} class="w-full max-w-3xl rounded border shadow"></canvas>
-	<ColorPalette {colorCounts} {colorToIdentifier} {displayMode} />
-	<canvas bind:this={originalCanvas} class="w-full max-w-3xl rounded border shadow"></canvas>
+	<canvas
+		bind:this={processedCanvas}
+		class="w-full max-w-3xl rounded border shadow"
+		class:hidden={showOriginal}
+	></canvas>
+	{#if img}
+		<img
+			src={img.src}
+			alt="Original"
+			class="w-full max-w-3xl rounded border shadow"
+			class:hidden={!showOriginal}
+		/>
+	{/if}
+
+	<ColorPalette {colorCounts} {colorToIdentifier} {symbolType} />
+	<canvas bind:this={originalCanvas} class="hidden"></canvas>
 </div>

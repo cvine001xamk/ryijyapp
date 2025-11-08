@@ -3,7 +3,7 @@
 
 	export let isImageLoaded: boolean;
 	export let processedCanvasWidth: number | undefined;
-	export let displayMode: 'color' | 'number' | 'letter' | 'code';
+	export let showOriginal: boolean;
 
 	const dispatch = createEventDispatcher<{
 		process: void;
@@ -27,18 +27,11 @@
 		>
 			Tallenna kaavio
 		</button>
-		<div class="flex items-center gap-2 rounded-lg border bg-white px-3 py-2 shadow-sm">
-			<span class="text-sm text-gray-700">Näyttötapa:</span>
-			<select
-				bind:value={displayMode}
-				on:change={() => dispatch('process')}
-				class="rounded border-gray-300 text-sm"
-			>
-				<option value="color">Värit</option>
-				<option value="number">Numerot</option>
-				<option value="letter">Kirjaimet</option>
-				<option value="code">Koodit</option>
-			</select>
-		</div>
+		<button
+			on:click={() => (showOriginal = !showOriginal)}
+			class="rounded-lg bg-gray-500 px-4 py-2 text-white hover:bg-gray-600"
+		>
+			{showOriginal ? 'Näytä kaavio' : 'Näytä alkuperäinen'}
+		</button>
 	{/if}
 </div>

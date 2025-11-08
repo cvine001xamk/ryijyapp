@@ -3,6 +3,9 @@
 	export let borderColor: 'black' | 'white' = 'black';
 	export let colorAmount = 0;
 	export let maxColors = 0;
+	export let aspectRatio = '1:1';
+	export let symbolType: 'kirjaimet' | 'numerot' | 'koodi' | 'ei mitään' = 'ei mitään';
+	export let showColor = true;
 
 	$: colorAmount = colorAmount || maxColors; // Initialize to max colors when available
 </script>
@@ -44,5 +47,31 @@
 			<option value="black">Musta</option>
 			<option value="white">Valkoinen</option>
 		</select>
+	</div>
+
+	<div class="flex flex-col items-center">
+		<label for="aspectRatioSelect" class="mb-1 font-medium text-gray-700">
+			Ruudun kuvasuhde:
+		</label>
+		<select id="aspectRatioSelect" bind:value={aspectRatio} class="rounded border px-2 py-1">
+			<option value="1:1">1:1</option>
+			<option value="1:2">1:2</option>
+			<option value="1:3">1:3</option>
+		</select>
+	</div>
+
+	<div class="flex flex-col items-center">
+		<label for="symbolTypeSelect" class="mb-1 font-medium text-gray-700"> Symbolit: </label>
+		<select id="symbolTypeSelect" bind:value={symbolType} class="rounded border px-2 py-1">
+			<option value="ei mitään">Ei mitään</option>
+			<option value="kirjaimet">Kirjaimet</option>
+			<option value="numerot">Numerot</option>
+			<option value="koodi">Koodi</option>
+		</select>
+	</div>
+
+	<div class="flex items-center">
+		<input id="showColor" type="checkbox" bind:checked={showColor} class="mr-2" />
+		<label for="showColor" class="font-medium text-gray-700"> Näytä värit </label>
 	</div>
 </div>

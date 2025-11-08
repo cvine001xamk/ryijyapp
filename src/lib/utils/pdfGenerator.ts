@@ -4,18 +4,18 @@ import { hexToRgb } from '$lib/utils/helperFunctions';
 const THREAD_LENGTH_PER_KNOT = 24; // cm per knot
 const THREADS_PER_KNOT = 4; // number of threads per knot
 
-type DisplayMode = 'color' | 'number' | 'letter' | 'code';
+type SymbolType = 'kirjaimet' | 'numerot' | 'koodi' | 'ei mitään';
 
 interface PdfGeneratorOptions {
 	canvas: HTMLCanvasElement;
 	gridInfo: string;
 	colorCounts: Map<string, number>;
 	colorToIdentifier: Map<string, string>;
-	displayMode: DisplayMode;
+	symbolType: SymbolType;
 }
 
 export function generatePdf(options: PdfGeneratorOptions): void {
-	const { canvas, gridInfo, colorCounts, colorToIdentifier, displayMode } = options;
+	const { canvas, gridInfo, colorCounts, colorToIdentifier, symbolType } = options;
 
 	if (!canvas?.width) {
 		alert('No processed image!');
@@ -66,7 +66,7 @@ export function generatePdf(options: PdfGeneratorOptions): void {
 		}
 
 		// Add color information with thread calculations
-		const identifier = displayMode !== 'color' ? `(${colorToIdentifier.get(hex) || ''}) ` : '';
+		const identifier = symbolType !== 'ei mitään' ? `(${colorToIdentifier.get(hex) || ''}) ` : '';
 		pdf.text(
 			`${identifier}${hex} - ${count} ruutua - ${totalThreads} lankaa (${totalLength.toFixed(1)} m)`,
 			35,

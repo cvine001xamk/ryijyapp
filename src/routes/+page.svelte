@@ -8,6 +8,10 @@
 	let imageFile: File | null = null;
 	let pixelSize = 30;
 	let borderColor: 'black' | 'white' = 'black';
+	let aspectRatio = '1:1';
+	let symbolType: 'kirjaimet' | 'numerot' | 'koodi' | 'ei mitään' = 'ei mitään';
+	let showColor = true;
+	let showOriginal = false;
 </script>
 
 <div class="container mx-auto mt-8 max-w-5xl rounded-2xl bg-white p-6 text-center shadow-lg">
@@ -31,8 +35,22 @@
 	{:else}
 		<div class="rounded-2xl bg-white p-6 shadow-lg" transition:fade>
 			<ImageControls bind:imageFile />
-			<PixelSettings bind:pixelSize bind:borderColor />
-			<CanvasArea {imageFile} {pixelSize} {borderColor} />
+			<PixelSettings
+				bind:pixelSize
+				bind:borderColor
+				bind:aspectRatio
+				bind:symbolType
+				bind:showColor
+			/>
+			<CanvasArea
+				{imageFile}
+				{pixelSize}
+				{borderColor}
+				{aspectRatio}
+				{symbolType}
+				{showColor}
+				bind:showOriginal
+			/>
 		</div>
 	{/if}
 </div>

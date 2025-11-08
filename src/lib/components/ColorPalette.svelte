@@ -1,7 +1,7 @@
 <script lang="ts">
 	export let colorCounts: Map<string, number>;
 	export let colorToIdentifier: Map<string, string>;
-	export let displayMode: 'color' | 'number' | 'letter' | 'code';
+	export let symbolType: 'kirjaimet' | 'numerot' | 'koodi' | 'ei mitään' = 'ei mitään';
 	let show = false;
 </script>
 
@@ -19,14 +19,14 @@
 				{#each Array.from(colorCounts.entries()) as [hex, count]}
 					<div class="flex w-20 flex-col items-center rounded-lg bg-white p-2 shadow-sm">
 						<div class="h-12 w-12 rounded-md border shadow" style="background-color:{hex}">
-							{#if displayMode !== 'color'}
+							{#if symbolType !== 'ei mitään'}
 								<div class="flex h-full items-center justify-center text-sm font-medium">
 									{colorToIdentifier.get(hex)}
 								</div>
 							{/if}
 						</div>
 						<span class="mt-1 text-xs font-medium text-gray-900">
-							{displayMode === 'code' ? hex : colorToIdentifier.get(hex) || hex}
+							{symbolType === 'koodi' ? hex : colorToIdentifier.get(hex) || hex}
 						</span>
 						<span class="text-xs text-gray-500">{count} ruutua</span>
 					</div>
