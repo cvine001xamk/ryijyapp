@@ -139,7 +139,8 @@
 				}
 				const newMaxColors = Math.min(uniqueColors.size, 30);
 				maxColors.set(newMaxColors);
-				colorAmount.set(newMaxColors);
+				// Only update colorAmount if the current value is greater than the new maximum
+				colorAmount.update(currentAmount => Math.min(currentAmount, newMaxColors));
 
 				isImageLoaded = true;
 				showOriginal = true;
@@ -347,12 +348,11 @@
 		});
 	}
 
-	$: {
-		if (isProcessed) {
-			$symbolType, $showColor, $borderColor;
-			drawCanvas();
-		}
+	$: if (isProcessed && ($symbolType || $showColor || $borderColor)) {
+		drawCanvas();
 	}
+
+
 </script>
 
 <div class="flex flex-col items-center gap-4">

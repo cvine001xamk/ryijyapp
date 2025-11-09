@@ -1,16 +1,19 @@
 <script lang="ts">
 	import { fade } from 'svelte/transition';
+	import {
+		pixelSize,
+		colorAmount,
+		aspectRatio,
+		maxColors,
+		threadsPerKnot
+	} from '$lib/stores/settingsStore';
 	export let isOpen: boolean;
 	export let onClose: () => void;
 
-	// Default values
-	let aspectRatio = '1:3';
-	let horizontalKnots = 30;
-	let colorCount = 20;
+	// Default values (now linked to stores)
 	let saveFormat = 'PDF';
-	let threadsPerKnot = 4;
 
-	const aspectRatios = ['1:1', '1:2', '1:3', '3:1'];
+	const aspectRatios = ['1:1', '1:2', '1:3'];
 	const saveFormats = ['PDF', 'XLSX', 'PNG'];
 	const threadOptions = [2, 3, 4];
 </script>
@@ -54,10 +57,10 @@
 					<!-- Aspect Ratio -->
 					<div class="space-y-2">
 						<label for="aspectRatioSelect" class="block text-sm font-medium text-gray-700">
-							Kuvasuhde
+							Ruutujen mittasuhde
 						</label>
 						<select
-							bind:value={aspectRatio}
+							bind:value={$aspectRatio}
 							class="w-full rounded-md border border-gray-300 p-2 text-gray-700"
 						>
 							{#each aspectRatios as ratio}
@@ -71,9 +74,9 @@
 						<label for="horizontalKnotsRange" class="block text-sm font-medium text-gray-700">
 							Solmujen määrä vaakatasossa
 						</label>
-						<input type="range" bind:value={horizontalKnots} min="10" max="100" class="w-full" />
+						<input type="range" bind:value={$pixelSize} min="10" max="100" class="w-full" />
 						<div class="text-center text-sm text-gray-600">
-							Nykyinen arvo: {horizontalKnots}
+							Nykyinen arvo: {$pixelSize}
 						</div>
 					</div>
 
@@ -82,9 +85,9 @@
 						<label for="colorCountRange" class="block text-sm font-medium text-gray-700">
 							Värimäärä
 						</label>
-						<input type="range" bind:value={colorCount} min="2" max="30" class="w-full" />
+						<input type="range" bind:value={$colorAmount} min="2" max={$maxColors} class="w-full" />
 						<div class="text-center text-sm text-gray-600">
-							Nykyinen arvo: {colorCount}
+							Nykyinen arvo: {$colorAmount}
 						</div>
 					</div>
 
@@ -113,7 +116,7 @@
 						</label>
 						<select
 							id="threadsPerKnot"
-							bind:value={threadsPerKnot}
+							bind:value={$threadsPerKnot}
 							class="w-full rounded-md border border-gray-300 p-2 text-gray-700"
 						>
 							{#each threadOptions as threads}
