@@ -7,7 +7,6 @@
 	import { page } from '$app/stores';
 
 	let isMenuOpen = false;
-	let pixelSize = 30;
 
 	function toggleMenu() {
 		isMenuOpen = !isMenuOpen;
@@ -61,5 +60,5 @@
 		<slot />
 	</main>
 
-	<Menu isOpen={isMenuOpen} onClose={closeMenu} bind:pixelSize />
+	<Menu isOpen={isMenuOpen} onClose={closeMenu} />
 </div>

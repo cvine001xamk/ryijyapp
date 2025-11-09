@@ -4,13 +4,15 @@
 	import CanvasArea from '$lib/components/CanvasArea.svelte';
 	import CameraIcon from '$lib/icons/CameraIcon.svelte';
 	import { fade } from 'svelte/transition';
+	import {
+		pixelSize,
+		borderColor,
+		aspectRatio,
+		symbolType,
+		showColor
+	} from '$lib/stores/settingsStore';
 
 	let imageFile: File | null = null;
-	let pixelSize = 30;
-	let borderColor: 'black' | 'white' = 'black';
-	let aspectRatio = '1:1';
-	let symbolType: 'kirjaimet' | 'numerot' | 'koodi' | 'ei mitään' = 'ei mitään';
-	let showColor = true;
 	let showOriginal = false;
 </script>
 
@@ -35,22 +37,8 @@
 	{:else}
 		<div class="rounded-2xl bg-white p-6 shadow-lg" transition:fade>
 			<ImageControls bind:imageFile />
-			<PixelSettings
-				bind:pixelSize
-				bind:borderColor
-				bind:aspectRatio
-				bind:symbolType
-				bind:showColor
-			/>
-			<CanvasArea
-				{imageFile}
-				{pixelSize}
-				{borderColor}
-				{aspectRatio}
-				{symbolType}
-				{showColor}
-				bind:showOriginal
-			/>
+			<PixelSettings />
+			<CanvasArea {imageFile} bind:showOriginal />
 		</div>
 	{/if}
 </div>

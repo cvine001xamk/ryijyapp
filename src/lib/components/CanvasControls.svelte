@@ -2,7 +2,6 @@
 	import { createEventDispatcher } from 'svelte';
 
 	export let isImageLoaded: boolean;
-	export let processedCanvasWidth: number | undefined;
 	export let showOriginal: boolean;
 	export let isProcessed: boolean;
 

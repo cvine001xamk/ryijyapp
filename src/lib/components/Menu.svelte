@@ -2,7 +2,6 @@
 	import { fade } from 'svelte/transition';
 	export let isOpen: boolean;
 	export let onClose: () => void;
-	export let pixelSize: number;
 
 	// Default values
 	let aspectRatio = '1:3';

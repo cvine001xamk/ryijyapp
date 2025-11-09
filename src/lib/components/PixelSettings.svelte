@@ -1,49 +1,64 @@
 <script lang="ts">
-	export let pixelSize = 30;
-	export let borderColor: 'black' | 'white' = 'black';
-	export let colorAmount = 0;
-	export let maxColors = 0;
-	export let aspectRatio = '1:1';
-	export let symbolType: 'kirjaimet' | 'numerot' | 'koodi' | 'ei mitään' = 'ei mitään';
-	export let showColor = true;
+	import {
+		pixelSize,
+		borderColor,
+		aspectRatio,
+		symbolType,
+		showColor,
+		colorAmount,
+		maxColors
+	} from '$lib/stores/settingsStore';
+	import { onMount } from 'svelte';
 
-	$: colorAmount = colorAmount || maxColors; // Initialize to max colors when available
+	let internalColorAmount: number;
+
+	onMount(() => {
+		const unsubscribe = colorAmount.subscribe((value) => {
+			internalColorAmount = value;
+		});
+		return unsubscribe;
+	});
+
+	$: if (internalColorAmount && internalColorAmount > $maxColors) {
+		colorAmount.set($maxColors);
+	}
 </script>
 
 <div class="mb-4 flex flex-col items-center gap-4">
 	<!-- Pixel size control -->
 	<div class="flex flex-col items-center">
 		<label for="pixelRange" class="mb-1 font-medium text-gray-700">
-			Rivin ruutumäärä: {pixelSize}
+			Rivin ruutumäärä: {$pixelSize}
 		</label>
 		<input
 			id="pixelRange"
 			type="range"
 			min="10"
 			max="100"
-			bind:value={pixelSize}
+			bind:value={$pixelSize}
 			class="w-64 accent-blue-500"
 		/>
 	</div>
 
 	<div class="flex flex-col items-center">
 		<label for="colorAmountRange" class="mb-1 font-medium text-gray-700">
-			Värien määrä: {colorAmount}
+			Värien määrä: {$colorAmount}
 		</label>
 		<input
 			id="colorAmountRange"
 			type="range"
 			min="2"
-			max={maxColors}
-			bind:value={colorAmount}
+			max={$maxColors}
+			bind:value={$colorAmount}
 			class="w-64 accent-blue-500"
+			disabled={$maxColors <= 2}
 		/>
 	</div>
 
 	<!-- Border color control -->
 	<div class="flex flex-col items-center">
 		<label for="borderColorSelect" class="mb-1 font-medium text-gray-700"> Ruudukon väri: </label>
-		<select id="borderColorSelect" bind:value={borderColor} class="rounded border px-2 py-1">
+		<select id="borderColorSelect" bind:value={$borderColor} class="rounded border px-2 py-1">
 			<option value="black">Musta</option>
 			<option value="white">Valkoinen</option>
 		</select>
@@ -53,7 +68,7 @@
 		<label for="aspectRatioSelect" class="mb-1 font-medium text-gray-700">
 			Ruudun kuvasuhde:
 		</label>
-		<select id="aspectRatioSelect" bind:value={aspectRatio} class="rounded border px-2 py-1">
+		<select id="aspectRatioSelect" bind:value={$aspectRatio} class="rounded border px-2 py-1">
 			<option value="1:1">1:1</option>
 			<option value="1:2">1:2</option>
 			<option value="1:3">1:3</option>
@@ -62,7 +77,7 @@
 
 	<div class="flex flex-col items-center">
 		<label for="symbolTypeSelect" class="mb-1 font-medium text-gray-700"> Symbolit: </label>
-		<select id="symbolTypeSelect" bind:value={symbolType} class="rounded border px-2 py-1">
+		<select id="symbolTypeSelect" bind:value={$symbolType} class="rounded border px-2 py-1">
 			<option value="ei mitään">Ei mitään</option>
 			<option value="kirjaimet">Kirjaimet</option>
 			<option value="numerot">Numerot</option>
@@ -71,7 +86,7 @@
 	</div>
 
 	<div class="flex items-center">
-		<input id="showColor" type="checkbox" bind:checked={showColor} class="mr-2" />
+		<input id="showColor" type="checkbox" bind:checked={$showColor} class="mr-2" />
 		<label for="showColor" class="font-medium text-gray-700"> Näytä värit </label>
 	</div>
 </div>
