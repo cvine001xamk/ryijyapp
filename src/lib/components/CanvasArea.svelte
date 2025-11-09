@@ -38,8 +38,8 @@
 	let gridDimensions = { rows: 0, cols: 0, blockWidth: 0, blockHeight: 0 };
 
 	const NUMBER_FONT_SIZE = 12;
-	const BOLD_LINE_WIDTH = 2;
-	const NORMAL_LINE_WIDTH = 1;
+	const BOLD_LINE_WIDTH = 3;
+	const NORMAL_LINE_WIDTH = 0.8;
 
 	let showColorPicker = false;
 	let colorPickerPos = { x: 0, y: 0 };
@@ -140,7 +140,7 @@
 				const newMaxColors = Math.min(uniqueColors.size, 30);
 				maxColors.set(newMaxColors);
 				// Only update colorAmount if the current value is greater than the new maximum
-				colorAmount.update(currentAmount => Math.min(currentAmount, newMaxColors));
+				colorAmount.update((currentAmount) => Math.min(currentAmount, newMaxColors));
 
 				isImageLoaded = true;
 				showOriginal = true;
@@ -351,8 +351,6 @@
 	$: if (isProcessed && ($symbolType || $showColor || $borderColor)) {
 		drawCanvas();
 	}
-
-
 </script>
 
 <div class="flex flex-col items-center gap-4">
@@ -366,7 +364,7 @@
 
 	{#if isLoading}
 		<div class="flex items-center justify-center">
-			<div class="h-32 w-32 animate-spin rounded-full border-b-2 border-t-2 border-blue-500"></div>
+			<div class="h-32 w-32 animate-spin rounded-full border-t-2 border-b-2 border-blue-500"></div>
 		</div>
 	{/if}
 
