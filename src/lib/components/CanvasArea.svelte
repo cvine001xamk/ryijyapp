@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
 	import ColorPalette from './ColorPalette.svelte';
-	import { rgbToHex, getBrightness } from '$lib/utils/helperFunctions';
+	import { rgbToHex, getBrightness, hexToRgb } from '$lib/utils/helperFunctions';
 	import type { RGB } from '$lib/utils/helperFunctions';
 	import { generatePdf } from '$lib/utils/pdfGenerator';
 	import CanvasControls from './CanvasControls.svelte';
@@ -16,6 +16,7 @@
 		maxColors
 	} from '$lib/stores/settingsStore';
 	import { quantizeColors } from '$lib/utils/colorQuantization';
+	import ColorPicker from './ColorPicker.svelte';
 
 	export let imageFile: File | null;
 	export let showOriginal = false;
@@ -39,6 +40,47 @@
 	const NUMBER_FONT_SIZE = 12;
 	const BOLD_LINE_WIDTH = 2;
 	const NORMAL_LINE_WIDTH = 1;
+
+	let showColorPicker = false;
+	let colorPickerPos = { x: 0, y: 0 };
+	let selectedPixel: { row: number; col: number } | null = null;
+
+	function handleCanvasClick(event: MouseEvent) {
+		if (!isProcessed) return;
+
+		const { rows, cols, blockWidth, blockHeight } = gridDimensions;
+		const outputWidth = cols * blockWidth;
+		const outputHeight = rows * blockHeight;
+
+		const rect = processedCanvas.getBoundingClientRect();
+		const scaleX = outputWidth / rect.width;
+		const scaleY = outputHeight / rect.height;
+
+		const canvasX = (event.clientX - rect.left) * scaleX;
+		const canvasY = (event.clientY - rect.top) * scaleY;
+
+		const col = Math.floor(canvasX / blockWidth);
+		const row = Math.floor(canvasY / blockHeight);
+
+		if (col >= 0 && col < cols && row >= 0 && row < rows) {
+			selectedPixel = { row, col };
+			colorPickerPos = { x: event.clientX, y: event.clientY };
+			showColorPicker = true;
+		}
+	}
+
+	function changeColor(event: CustomEvent<string>) {
+		if (!selectedPixel) return;
+		const newColorHex = event.detail;
+		const newColorRgb = hexToRgb(newColorHex);
+
+		if (newColorRgb) {
+			const { row, col } = selectedPixel;
+			pixelatedData[row][col] = newColorRgb;
+			drawCanvas();
+		}
+		showColorPicker = false;
+	}
 
 	function getIdentifierForColor(hex: string, type: 'kirjaimet' | 'numerot' | 'koodi'): string {
 		if (!colorToIdentifier.has(hex)) {
@@ -121,9 +163,26 @@
 		pctx.clearRect(0, 0, processedCanvas.width, processedCanvas.height);
 
 		colorCounts = new Map();
+		const uniqueColors = new Set<string>();
+		for (let r = 0; r < rows; r++) {
+			for (let c = 0; c < cols; c++) {
+				const color = pixelatedData[r][c];
+				if (!color) continue;
+				const hex = rgbToHex(color.r, color.g, color.b);
+				colorCounts.set(hex, (colorCounts.get(hex) || 0) + 1);
+				uniqueColors.add(hex);
+			}
+		}
+
+		const sortedColors = Array.from(uniqueColors).sort();
 		colorToIdentifier.clear();
 		nextNumber = 1;
 		nextLetter = 'A';
+		for (const hex of sortedColors) {
+			if ($symbolType !== 'ei mitään') {
+				getIdentifierForColor(hex, $symbolType);
+			}
+		}
 
 		for (let r = 0; r < rows; r++) {
 			for (let c = 0; c < cols; c++) {
@@ -133,13 +192,12 @@
 				const x = c * blockWidth;
 				const y = r * blockHeight;
 				const hex = rgbToHex(color.r, color.g, color.b);
-				colorCounts.set(hex, (colorCounts.get(hex) || 0) + 1);
 
 				pctx.fillStyle = $showColor ? `rgb(${color.r}, ${color.g}, ${color.b})` : 'white';
 				pctx.fillRect(x, y, blockWidth, blockHeight);
 
 				if ($symbolType !== 'ei mitään') {
-					const identifier = getIdentifierForColor(hex, $symbolType);
+					const identifier = colorToIdentifier.get(hex) || '';
 					if (!$showColor) {
 						pctx.fillStyle = 'black';
 					} else {
@@ -316,6 +374,7 @@
 		bind:this={processedCanvas}
 		class="w-full max-w-3xl rounded border shadow"
 		class:hidden={showOriginal || isLoading}
+		on:click={handleCanvasClick}
 	></canvas>
 	{#if gridInfo && !showOriginal && !isLoading}
 		<p class="text-sm text-gray-700">{gridInfo}</p>
@@ -328,6 +387,16 @@
 			class:hidden={!showOriginal || isLoading}
 		/>
 	{/if}
+
+	<ColorPicker
+		show={showColorPicker}
+		position={colorPickerPos}
+		colors={Array.from(colorCounts.keys())}
+		{colorToIdentifier}
+		symbolType={$symbolType}
+		on:select={changeColor}
+		on:close={() => (showColorPicker = false)}
+	/>
 
 	<ColorPalette {colorCounts} {colorToIdentifier} symbolType={$symbolType} />
 	<canvas bind:this={originalCanvas} class="hidden"></canvas>

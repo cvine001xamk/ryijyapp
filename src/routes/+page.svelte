@@ -28,7 +28,8 @@
 				accept="image/*"
 				class="hidden"
 				on:change={(e) => {
-					imageFile = e.target?.files?.[0] ?? null;
+					const target = e.target as HTMLInputElement;
+					imageFile = target.files?.[0] ?? null;
 				}}
 			/>
 			<CameraIcon />
