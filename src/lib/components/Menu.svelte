@@ -5,7 +5,9 @@
 		colorAmount,
 		aspectRatio,
 		maxColors,
-		threadsPerKnot
+		threadsPerKnot,
+		tuftWidth,
+		tuftHeight
 	} from '$lib/stores/settingsStore';
 	export let isOpen: boolean;
 	export let onClose: () => void;
@@ -93,7 +95,7 @@
 
 					<!-- Save Format -->
 					<div class="space-y-2">
-						<span class="block text-sm font-medium text-gray-700"> Tallennusmuoto </span>
+						<span class="block text-sm font-medium text-gray-700"> Kaavion tallennusmuoto </span>
 						<div class="flex gap-4">
 							{#each saveFormats as format}
 								<label for={`saveFormat-${format}`} class="flex items-center gap-2">
@@ -112,7 +114,7 @@
 					<!-- Threads per Knot -->
 					<div class="space-y-2">
 						<label for="threadsPerKnot" class="block text-sm font-medium text-gray-700">
-							Lankojen määrä solmua kohden
+							Lankojen määrä yhtä nukkaa kohden
 						</label>
 						<select
 							id="threadsPerKnot"
@@ -123,6 +125,38 @@
 								<option value={threads}>{threads} lankaa</option>
 							{/each}
 						</select>
+					</div>
+
+					<!-- Tuft Width -->
+					<div class="space-y-2">
+						<label for="tuftWidthInput" class="block text-sm font-medium text-gray-700">
+							Yhden nukan leveys (cm)
+						</label>
+						<input
+							type="number"
+							bind:value={$tuftWidth}
+							step="0.1"
+							class="w-full rounded-md border border-gray-300 p-2 text-gray-700"
+						/>
+						<div class="text-center text-sm text-gray-600">
+							Nykyinen arvo: {$tuftWidth} cm
+						</div>
+					</div>
+
+					<!-- Tuft Height -->
+					<div class="space-y-2">
+						<label for="tuftHeightInput" class="block text-sm font-medium text-gray-700">
+							Yhden nukan korkeus (cm)
+						</label>
+						<input
+							type="number"
+							bind:value={$tuftHeight}
+							step="0.1"
+							class="w-full rounded-md border border-gray-300 p-2 text-gray-700"
+						/>
+						<div class="text-center text-sm text-gray-600">
+							Nykyinen arvo: {$tuftHeight} cm
+						</div>
 					</div>
 				</div>
 			</div>

@@ -8,3 +8,5 @@ export const showColor = writable(true);
 export const colorAmount = writable<number>(15);
 export const maxColors = writable<number>(30);
 export const threadsPerKnot = writable<number>(3);
+export const tuftWidth = writable<number>(1.0);
+export const tuftHeight = writable<number>(1.0);

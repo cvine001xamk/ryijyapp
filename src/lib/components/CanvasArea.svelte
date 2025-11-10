@@ -13,10 +13,14 @@
 		symbolType,
 		showColor,
 		colorAmount,
-		maxColors
+		maxColors,
+		threadsPerKnot,
+		tuftWidth,
+		tuftHeight
 	} from '$lib/stores/settingsStore';
 	import { quantizeColors } from '$lib/utils/colorQuantization';
 	import ColorPicker from './ColorPicker.svelte';
+	import SaveConfirmationModal from './SaveConfirmationModal.svelte';
 
 	export let imageFile: File | null;
 	export let showOriginal = false;
@@ -29,6 +33,7 @@
 	let isImageLoaded = false;
 	let isProcessed = false;
 	let isLoading = false;
+	let isSaveModalOpen = false;
 
 	let colorToIdentifier = new Map<string, string>();
 	let nextNumber = 1;
@@ -339,13 +344,21 @@
 	}
 
 	function save() {
+		isSaveModalOpen = true;
+	}
+
+	function confirmSave() {
 		generatePdf({
 			canvas: processedCanvas,
 			gridInfo,
 			colorCounts,
 			colorToIdentifier,
-			symbolType: $symbolType
+			symbolType: $symbolType,
+			threadsPerKnot: $threadsPerKnot,
+			tuftWidth: $tuftWidth,
+			tuftHeight: $tuftHeight
 		});
+		isSaveModalOpen = false;
 	}
 
 	$: if (isProcessed && ($symbolType || $showColor || $borderColor)) {
@@ -397,5 +410,10 @@
 	/>
 
 	<ColorPalette {colorCounts} {colorToIdentifier} symbolType={$symbolType} />
+	<SaveConfirmationModal
+		isOpen={isSaveModalOpen}
+		onConfirm={confirmSave}
+		onClose={() => (isSaveModalOpen = false)}
+	/>
 	<canvas bind:this={originalCanvas} class="hidden"></canvas>
 </div>

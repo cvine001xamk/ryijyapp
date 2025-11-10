@@ -1,9 +1,6 @@
 import { jsPDF } from 'jspdf';
 import { hexToRgb } from '$lib/utils/helperFunctions';
 
-const THREAD_LENGTH_PER_KNOT = 24; // cm per knot
-const THREADS_PER_KNOT = 4; // number of threads per knot
-
 type SymbolType = 'kirjaimet' | 'numerot' | 'koodi' | 'ei mitään';
 
 interface PdfGeneratorOptions {
@@ -12,10 +9,22 @@ interface PdfGeneratorOptions {
 	colorCounts: Map<string, number>;
 	colorToIdentifier: Map<string, string>;
 	symbolType: SymbolType;
+	threadsPerKnot: number;
+	tuftWidth: number;
+	tuftHeight: number;
 }
 
 export function generatePdf(options: PdfGeneratorOptions): void {
-	const { canvas, gridInfo, colorCounts, colorToIdentifier, symbolType } = options;
+	const {
+		canvas,
+		gridInfo,
+		colorCounts,
+		colorToIdentifier,
+		symbolType,
+		threadsPerKnot,
+		tuftWidth,
+		tuftHeight
+	} = options;
 
 	if (!canvas?.width) {
 		alert('No processed image!');
@@ -34,17 +43,26 @@ export function generatePdf(options: PdfGeneratorOptions): void {
 	pdf.setFontSize(12);
 	pdf.text(`Ruudukko: ${gridInfo}`, 20, 25);
 
+	const [gridCols, gridRows] = gridInfo.split(' × ').map((s) => parseInt(s.replace(' ruutua', '')));
+	if (!isNaN(gridCols) && !isNaN(gridRows)) {
+		const totalWidth = gridCols * tuftWidth;
+		const totalHeight = gridRows * tuftHeight;
+		pdf.text(`Fyysinen koko: ${totalWidth.toFixed(1)} cm × ${totalHeight.toFixed(1)} cm`, 20, 32);
+	}
+
 	// Add processed image
 	const imgData = canvas.toDataURL('image/png');
 	const imgWidth = Math.min(pageWidth - 40, 170); // Max width with margins
 	const imgHeight = (canvas.height * imgWidth) / canvas.width;
-	pdf.addImage(imgData, 'PNG', 20, 35, imgWidth, imgHeight);
+	pdf.addImage(imgData, 'PNG', 20, 42, imgWidth, imgHeight);
 
 	// Add color information
-	let yPosition = imgHeight + 50;
+	let yPosition = imgHeight + 57;
 	pdf.setFontSize(14);
 	pdf.text('Käytetyt värit:', 20, yPosition);
 	yPosition += 10;
+
+	const threadLengthPerKnotCm = (tuftWidth + 2 * tuftHeight) * threadsPerKnot;
 
 	// Add color swatches and information
 	pdf.setFontSize(12);
@@ -55,8 +73,7 @@ export function generatePdf(options: PdfGeneratorOptions): void {
 			yPosition = 20;
 		}
 
-		const totalThreads = count * THREADS_PER_KNOT;
-		const totalLength = (count * THREAD_LENGTH_PER_KNOT * THREADS_PER_KNOT) / 100; // Convert to meters
+		const totalLengthM = (threadLengthPerKnotCm * count) / 100;
 
 		// Draw color rectangle
 		const rgb = hexToRgb(hex);
@@ -67,18 +84,13 @@ export function generatePdf(options: PdfGeneratorOptions): void {
 
 		// Add color information with thread calculations
 		const identifier = symbolType !== 'ei mitään' ? `(${colorToIdentifier.get(hex) || ''}) ` : '';
-		pdf.text(
-			`${identifier}${hex} - ${count} ruutua - ${totalThreads} lankaa (${totalLength.toFixed(1)} m)`,
-			35,
-			yPosition
-		);
+		pdf.text(`${identifier}${hex} - ${count} ruutua - ${totalLengthM.toFixed(1)} m`, 35, yPosition);
 		yPosition += 15;
 	}
 
 	// Calculate and add total threads needed
 	const totalKnots = Array.from(colorCounts.values()).reduce((sum, count) => sum + count, 0);
-	const totalThreadCount = totalKnots * THREADS_PER_KNOT;
-	const totalThreadLength = (totalKnots * THREAD_LENGTH_PER_KNOT * THREADS_PER_KNOT) / 100;
+	const totalThreadLengthM = (threadLengthPerKnotCm * totalKnots) / 100;
 
 	yPosition += 10;
 	pdf.setFontSize(14);
@@ -87,9 +99,9 @@ export function generatePdf(options: PdfGeneratorOptions): void {
 	pdf.setFontSize(12);
 	pdf.text(`Solmuja: ${totalKnots}`, 20, yPosition);
 	yPosition += 8;
-	pdf.text(`Lankoja: ${totalThreadCount}`, 20, yPosition);
+	pdf.text(`Lankojen kokonaispituus vähintään: ${totalThreadLengthM.toFixed(1)} m`, 20, yPosition);
 	yPosition += 8;
-	pdf.text(`Lankojen kokonaispituus: ${totalThreadLength.toFixed(1)} m`, 20, yPosition);
+	pdf.text(`Lankojen määrä per nukka: ${threadsPerKnot}`, 20, yPosition);
 
 	// Save the PDF
 	pdf.save('ryijykaavio.pdf');
