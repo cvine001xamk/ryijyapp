@@ -16,7 +16,8 @@
 		maxColors,
 		threadsPerKnot,
 		tuftWidth,
-		tuftHeight
+		tuftHeight,
+		wastage
 	} from '$lib/stores/settingsStore';
 	import { quantizeColors } from '$lib/utils/colorQuantization';
 	import ColorPicker from './ColorPicker.svelte';
@@ -356,7 +357,8 @@
 			symbolType: $symbolType,
 			threadsPerKnot: $threadsPerKnot,
 			tuftWidth: $tuftWidth,
-			tuftHeight: $tuftHeight
+			tuftHeight: $tuftHeight,
+			wastage: $wastage
 		});
 		isSaveModalOpen = false;
 	}

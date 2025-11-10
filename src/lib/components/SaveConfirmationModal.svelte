@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { fade } from 'svelte/transition';
-	import { tuftWidth, tuftHeight, threadsPerKnot } from '$lib/stores/settingsStore';
+	import { tuftWidth, tuftHeight, threadsPerKnot, wastage } from '$lib/stores/settingsStore';
 
 	export let isOpen: boolean;
 	export let onConfirm: () => void;
@@ -60,6 +60,19 @@
 							<option value={threads}>{threads} lankaa</option>
 						{/each}
 					</select>
+				</div>
+
+				<!-- Wastage -->
+				<div class="space-y-2">
+					<label for="wastageInput" class="block text-sm font-medium text-gray-700">
+						Hävikki (%)
+					</label>
+					<input
+						type="number"
+						bind:value={$wastage}
+						class="w-full rounded-md border border-gray-300 p-2 text-gray-700"
+					/>
+					<div class="text-right text-sm text-gray-600">{$wastage}%</div>
 				</div>
 			</div>
 

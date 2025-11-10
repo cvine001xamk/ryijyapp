@@ -12,6 +12,7 @@ interface PdfGeneratorOptions {
 	threadsPerKnot: number;
 	tuftWidth: number;
 	tuftHeight: number;
+	wastage: number;
 }
 
 export function generatePdf(options: PdfGeneratorOptions): void {
@@ -23,7 +24,8 @@ export function generatePdf(options: PdfGeneratorOptions): void {
 		symbolType,
 		threadsPerKnot,
 		tuftWidth,
-		tuftHeight
+		tuftHeight,
+		wastage
 	} = options;
 
 	if (!canvas?.width) {
@@ -34,6 +36,15 @@ export function generatePdf(options: PdfGeneratorOptions): void {
 	const pdf = new jsPDF();
 	const pageWidth = pdf.internal.pageSize.getWidth();
 	const pageHeight = pdf.internal.pageSize.getHeight();
+	const bottomMargin = 20;
+
+	const checkPageBreak = (y: number, lineHeight: number) => {
+		if (y + lineHeight > pageHeight - bottomMargin) {
+			pdf.addPage();
+			return bottomMargin;
+		}
+		return y;
+	};
 
 	// Add title
 	pdf.setFontSize(20);
@@ -58,22 +69,21 @@ export function generatePdf(options: PdfGeneratorOptions): void {
 
 	// Add color information
 	let yPosition = imgHeight + 57;
+	yPosition = checkPageBreak(yPosition, 10);
 	pdf.setFontSize(14);
 	pdf.text('Käytetyt värit:', 20, yPosition);
 	yPosition += 10;
 
 	const threadLengthPerKnotCm = (tuftWidth + 2 * tuftHeight) * threadsPerKnot;
+	const wastageFactor = 1 + wastage / 100;
 
 	// Add color swatches and information
 	pdf.setFontSize(12);
 	for (const [hex, count] of colorCounts.entries()) {
-		// Check if we need a new page
-		if (yPosition > pageHeight - 20) {
-			pdf.addPage();
-			yPosition = 20;
-		}
+		yPosition = checkPageBreak(yPosition, 15);
 
 		const totalLengthM = (threadLengthPerKnotCm * count) / 100;
+		const lengthWithWastage = totalLengthM * wastageFactor;
 
 		// Draw color rectangle
 		const rgb = hexToRgb(hex);
@@ -84,23 +94,39 @@ export function generatePdf(options: PdfGeneratorOptions): void {
 
 		// Add color information with thread calculations
 		const identifier = symbolType !== 'ei mitään' ? `(${colorToIdentifier.get(hex) || ''}) ` : '';
-		pdf.text(`${identifier}${hex} - ${count} ruutua - ${totalLengthM.toFixed(1)} m`, 35, yPosition);
+		pdf.text(
+			`${identifier}${hex} - ${count} ruutua - ${lengthWithWastage.toFixed(1)} m`,
+			35,
+			yPosition
+		);
 		yPosition += 15;
 	}
 
 	// Calculate and add total threads needed
 	const totalKnots = Array.from(colorCounts.values()).reduce((sum, count) => sum + count, 0);
 	const totalThreadLengthM = (threadLengthPerKnotCm * totalKnots) / 100;
+	const totalLengthWithWastage = totalThreadLengthM * wastageFactor;
 
 	yPosition += 10;
+	yPosition = checkPageBreak(yPosition, 10);
 	pdf.setFontSize(14);
 	pdf.text('Yhteensä:', 20, yPosition);
 	yPosition += 10;
+
+	yPosition = checkPageBreak(yPosition, 8);
 	pdf.setFontSize(12);
-	pdf.text(`Solmuja: ${totalKnots}`, 20, yPosition);
+	pdf.text(`Nukkia: ${totalKnots}`, 20, yPosition);
 	yPosition += 8;
-	pdf.text(`Lankojen kokonaispituus vähintään: ${totalThreadLengthM.toFixed(1)} m`, 20, yPosition);
+
+	yPosition = checkPageBreak(yPosition, 8);
+	pdf.text(
+		`Lankojen kokonaispituus (${wastage}% hävikillä): ${totalLengthWithWastage.toFixed(1)} m`,
+		20,
+		yPosition
+	);
 	yPosition += 8;
+
+	yPosition = checkPageBreak(yPosition, 8);
 	pdf.text(`Lankojen määrä per nukka: ${threadsPerKnot}`, 20, yPosition);
 
 	// Save the PDF
