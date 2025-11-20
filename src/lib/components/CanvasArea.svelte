@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, createEventDispatcher } from 'svelte';
 	import { browser } from '$app/environment';
 	import ColorPalette from './ColorPalette.svelte';
 	import { rgbToHex, getBrightness, hexToRgb } from '$lib/utils/helperFunctions';
@@ -22,9 +22,14 @@
 	import { quantizeColors } from '$lib/utils/colorQuantization';
 	import ColorPicker from './ColorPicker.svelte';
 	import SaveConfirmationModal from './SaveConfirmationModal.svelte';
+	import ResetIcon from '$lib/icons/ResetIcon.svelte';
+	import EyeIcon from '$lib/icons/EyeIcon.svelte';
+	import GridIcon from '$lib/icons/GridIcon.svelte';
 
 	export let imageFile: File | null;
 	export let showOriginal = false;
+
+	const dispatch = createEventDispatcher();
 
 	let originalCanvas: HTMLCanvasElement;
 	let processedCanvas: HTMLCanvasElement;
@@ -54,8 +59,15 @@
 	let inputBuffer = '';
 	let bufferTimeout: ReturnType<typeof setTimeout> | null = null;
 
+	let scale = 1;
+	let pan = { x: 0, y: 0 };
+	let isPanning = false;
+	let lastPanPosition = { x: 0, y: 0 };
+	let isPinching = false;
+	let lastTouchDistance = 0;
+
 	function handleCanvasClick(event: MouseEvent) {
-		if (!isProcessed) return;
+		if (!isProcessed || isPanning) return;
 
 		const { rows, cols, blockWidth, blockHeight } = gridDimensions;
 		const outputWidth = cols * blockWidth;
@@ -65,15 +77,18 @@
 		const scaleX = outputWidth / rect.width;
 		const scaleY = outputHeight / rect.height;
 
-		const canvasX = (event.clientX - rect.left) * scaleX;
-		const canvasY = (event.clientY - rect.top) * scaleY;
+		const bitmapX = (event.clientX - rect.left) * scaleX;
+		const bitmapY = (event.clientY - rect.top) * scaleY;
 
-		const col = Math.floor(canvasX / blockWidth);
-		const row = Math.floor(canvasY / blockHeight);
+		const finalX = (bitmapX - pan.x) / scale;
+		const finalY = (bitmapY - pan.y) / scale;
+
+		const col = Math.floor(finalX / blockWidth);
+		const row = Math.floor(finalY / blockHeight);
 
 		if (col >= 0 && col < cols && row >= 0 && row < rows) {
 			selectedPixel = { row, col };
-			colorPickerPos = { x: event.clientX, y: event.clientY };
+			colorPickerPos = { x: event.clientX, y: event.clientY + 50 };
 			showColorPicker = true;
 			drawCanvas();
 		}
@@ -201,6 +216,10 @@
 			identifierToColor.set(identifier, hex);
 		}
 
+		pctx.save();
+		pctx.translate(pan.x, pan.y);
+		pctx.scale(scale, scale);
+
 		for (let r = 0; r < rows; r++) {
 			for (let c = 0; c < cols; c++) {
 				const color = pixelatedData[r][c];
@@ -230,6 +249,7 @@
 		}
 
 		drawGrid(pctx, rows, cols, blockWidth, blockHeight, outputWidth, outputHeight);
+		pctx.restore();
 		drawNumbering(pctx, rows, cols, blockWidth, blockHeight, outputWidth, outputHeight);
 	}
 
@@ -259,7 +279,7 @@
 		}
 
 		if (selectedPixel) {
-			pctx.strokeStyle = 'red';
+			pctx.strokeStyle = 'white';
 			pctx.lineWidth = BOLD_LINE_WIDTH;
 			pctx.strokeRect(
 				selectedPixel.col * blockWidth,
@@ -384,6 +404,12 @@
 		isSaveModalOpen = false;
 	}
 
+	function handleResetView() {
+		scale = 1;
+		pan = { x: 0, y: 0 };
+		drawCanvas();
+	}
+
 	$: if (isProcessed && ($symbolType || $showColor || $borderColor)) {
 		drawCanvas();
 	}
@@ -433,12 +459,15 @@
 				const scaleX = outputWidth / rect.width;
 				const scaleY = outputHeight / rect.height;
 
-				const canvasX = col * blockWidth + blockWidth / 2;
-				const canvasY = row * blockHeight + blockHeight / 2;
+				const canvasX = (col + 0.5) * blockWidth;
+				const canvasY = (row + 0.5) * blockHeight;
+
+				const bitmapX = canvasX * scale + pan.x;
+				const bitmapY = canvasY * scale + pan.y;
 
 				colorPickerPos = {
-					x: canvasX / scaleX + rect.left,
-					y: canvasY / scaleY + rect.top
+					x: bitmapX / scaleX + rect.left,
+					y: bitmapY / scaleY + rect.top + 50
 				};
 
 				drawCanvas();
@@ -465,33 +494,154 @@
 			if (bufferTimeout) clearTimeout(bufferTimeout);
 			inputBuffer += key;
 
-			bufferTimeout = window.setTimeout(() => {
-				if (identifierToColor.has(inputBuffer)) {
-					const hex = identifierToColor.get(inputBuffer);
-					if (hex) {
-						const newColorRgb = hexToRgb(hex);
-						if (newColorRgb) {
-							const { row, col } = selectedPixel;
-							pixelatedData[row][col] = newColorRgb;
-							drawCanvas();
-						}
+			const isPrefix = Array.from(identifierToColor.keys()).some(
+				(id) => id.startsWith(inputBuffer) && id !== inputBuffer
+			);
+			const isFullMatch = identifierToColor.has(inputBuffer);
+
+			const applyColorChange = (buffer: string) => {
+				const hex = identifierToColor.get(buffer);
+				if (hex) {
+					const newColorRgb = hexToRgb(hex);
+					if (newColorRgb) {
+						const { row, col } = selectedPixel;
+						pixelatedData[row][col] = newColorRgb;
+						drawCanvas();
 					}
 				}
+			};
+
+			if (isFullMatch && !isPrefix) {
+				applyColorChange(inputBuffer);
 				inputBuffer = '';
-				bufferTimeout = null;
-			}, 500);
+			} else if (isFullMatch || isPrefix) {
+				bufferTimeout = window.setTimeout(() => {
+					if (identifierToColor.has(inputBuffer)) {
+						applyColorChange(inputBuffer);
+					}
+					inputBuffer = '';
+					bufferTimeout = null;
+				}, 400);
+			} else {
+				inputBuffer = '';
+			}
+		}
+	}
+
+	function handleWheel(event: WheelEvent) {
+		event.preventDefault();
+
+		const zoomIntensity = 0.1;
+		const delta = -event.deltaY;
+		const oldScale = scale;
+
+		scale += delta > 0 ? zoomIntensity : -zoomIntensity;
+		scale = Math.max(0.5, Math.min(scale, 5)); // Clamp scale
+
+		const rect = processedCanvas.getBoundingClientRect();
+		const mouseX = event.clientX - rect.left;
+		const mouseY = event.clientY - rect.top;
+
+		pan.x = mouseX - (mouseX - pan.x) * (scale / oldScale);
+		pan.y = mouseY - (mouseY - pan.y) * (scale / oldScale);
+
+		drawCanvas();
+	}
+
+	function handleMouseDown(event: MouseEvent) {
+		if (event.button === 1) {
+			// Middle mouse button
+			isPanning = true;
+			lastPanPosition = { x: event.clientX, y: event.clientY };
+			processedCanvas.style.cursor = 'grabbing';
+		}
+	}
+
+	function handleMouseMove(event: MouseEvent) {
+		if (isPanning) {
+			const dx = event.clientX - lastPanPosition.x;
+			const dy = event.clientY - lastPanPosition.y;
+			lastPanPosition = { x: event.clientX, y: event.clientY };
+
+			pan.x += dx;
+			pan.y += dy;
+			drawCanvas();
+		}
+	}
+
+	function handleMouseUp(event: MouseEvent) {
+		if (event.button === 1) {
+			isPanning = false;
+			processedCanvas.style.cursor = 'default';
+		}
+	}
+
+	function getTouchDistance(touches: TouchList): number {
+		const dx = touches[0].clientX - touches[1].clientX;
+		const dy = touches[0].clientY - touches[1].clientY;
+		return Math.sqrt(dx * dx + dy * dy);
+	}
+
+	function handleTouchStart(event: TouchEvent) {
+		if (event.touches.length === 2) {
+			isPinching = true;
+			lastTouchDistance = getTouchDistance(event.touches);
+		} else if (event.touches.length === 1) {
+			isPanning = true;
+			lastPanPosition = { x: event.touches[0].clientX, y: event.touches[0].clientY };
+		}
+	}
+
+	function handleTouchMove(event: TouchEvent) {
+		event.preventDefault();
+		if (isPinching && event.touches.length === 2) {
+			const newTouchDistance = getTouchDistance(event.touches);
+			const delta = newTouchDistance - lastTouchDistance;
+			lastTouchDistance = newTouchDistance;
+
+			const oldScale = scale;
+			scale += delta * 0.01; // Adjust sensitivity
+			scale = Math.max(0.5, Math.min(scale, 5));
+
+			const rect = processedCanvas.getBoundingClientRect();
+			const touchCenterX = (event.touches[0].clientX + event.touches[1].clientX) / 2 - rect.left;
+			const touchCenterY = (event.touches[0].clientY + event.touches[1].clientY) / 2 - rect.top;
+
+			pan.x = touchCenterX - (touchCenterX - pan.x) * (scale / oldScale);
+			pan.y = touchCenterY - (touchCenterY - pan.y) * (scale / oldScale);
+
+			drawCanvas();
+		} else if (isPanning && event.touches.length === 1) {
+			const dx = event.touches[0].clientX - lastPanPosition.x;
+			const dy = event.touches[0].clientY - lastPanPosition.y;
+			lastPanPosition = { x: event.touches[0].clientX, y: event.touches[0].clientY };
+
+			pan.x += dx;
+			pan.y += dy;
+			drawCanvas();
+		}
+	}
+
+	function handleTouchEnd(event: TouchEvent) {
+		if (event.touches.length < 2) {
+			isPinching = false;
+		}
+		if (event.touches.length < 1) {
+			isPanning = false;
 		}
 	}
 </script>
 
-<svelte:window on:keydown={handleKeydown} />
+<svelte:window on:keydown={handleKeydown} on:mouseup={handleMouseUp} on:mousemove={handleMouseMove} />
 
 <div class="flex flex-col items-center gap-4">
 	<CanvasControls
 		{isImageLoaded}
-		on:process={processImage}
+		on:process={() => {
+			processImage();
+			dispatch('process');
+		}}
 		on:save={save}
-		bind:showOriginal
 		{isProcessed}
 	/>
 
@@ -501,22 +651,63 @@
 		</div>
 	{/if}
 
-	<canvas
-		bind:this={processedCanvas}
-		class="w-full max-w-3xl rounded border shadow"
-		class:hidden={showOriginal || isLoading}
-		on:click={handleCanvasClick}
-	></canvas>
-	{#if gridInfo && !showOriginal && !isLoading}
-		<p class="text-sm text-gray-700">{gridInfo}</p>
-	{/if}
-	{#if img}
-		<img
-			src={img.src}
-			alt="Original"
-			class="w-full max-w-3xl rounded border shadow"
-			class:hidden={!showOriginal || isLoading}
-		/>
+	<div class="w-full max-w-3xl">
+		<canvas
+			bind:this={processedCanvas}
+			class="w-full rounded border shadow"
+			class:hidden={showOriginal || isLoading}
+			on:click={handleCanvasClick}
+			on:wheel={handleWheel}
+			on:mousedown={handleMouseDown}
+			on:touchstart={handleTouchStart}
+			on:touchmove={handleTouchMove}
+			on:touchend={handleTouchEnd}
+		></canvas>
+		{#if img}
+			<img
+				src={img.src}
+				alt="Original"
+				class="w-full max-w-3xl rounded border shadow"
+				class:hidden={!showOriginal || isLoading}
+			/>
+		{/if}
+	</div>
+
+	{#if isProcessed && !isLoading}
+		<div class="flex w-full max-w-3xl items-center justify-between">
+			<p class="text-sm text-gray-700">
+				{#if !showOriginal}
+					{gridInfo}
+				{:else}
+					Alkuperäinen kuva
+				{/if}
+			</p>
+
+			<div class="flex gap-2">
+				<button
+					on:click={handleResetView}
+					class="rounded-full bg-gray-200 p-2 text-gray-700 hover:bg-gray-300"
+					class:opacity-50={showOriginal}
+					disabled={showOriginal}
+					aria-label="Reset view"
+					title="Reset view"
+				>
+					<ResetIcon />
+				</button>
+				<button
+					on:click={() => (showOriginal = !showOriginal)}
+					class="rounded-full bg-gray-200 p-2 text-gray-700 hover:bg-gray-300"
+					aria-label={showOriginal ? 'Show grid' : 'Show original'}
+					title={showOriginal ? 'Show grid' : 'Show original'}
+				>
+					{#if showOriginal}
+						<GridIcon />
+					{:else}
+						<EyeIcon />
+					{/if}
+				</button>
+			</div>
+		</div>
 	{/if}
 
 	<ColorPicker

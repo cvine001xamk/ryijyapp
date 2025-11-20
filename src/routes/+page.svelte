@@ -3,20 +3,15 @@
 	import PixelSettings from '$lib/components/PixelSettings.svelte';
 	import CanvasArea from '$lib/components/CanvasArea.svelte';
 	import CameraIcon from '$lib/icons/CameraIcon.svelte';
+	import CollapsibleControls from '$lib/components/CollapsibleControls.svelte';
 	import { fade } from 'svelte/transition';
-	import {
-		pixelSize,
-		borderColor,
-		aspectRatio,
-		symbolType,
-		showColor
-	} from '$lib/stores/settingsStore';
 
 	let imageFile: File | null = null;
 	let showOriginal = false;
+	let controlsOpen = true;
 </script>
 
-<div class="container mx-auto mt-8 max-w-5xl rounded-2xl bg-white p-6 text-center shadow-lg">
+<div class="container mx-auto mt-8 max-w-5xl text-center">
 	{#if !imageFile}
 		<label
 			for="initialImageUpload"
@@ -37,9 +32,12 @@
 		</label>
 	{:else}
 		<div class="rounded-2xl bg-white p-6 shadow-lg" transition:fade>
-			<ImageControls bind:imageFile />
-			<PixelSettings />
-			<CanvasArea {imageFile} bind:showOriginal />
+			<CollapsibleControls bind:isOpen={controlsOpen}>
+				<ImageControls bind:imageFile />
+				<PixelSettings />
+			</CollapsibleControls>
+			<CanvasArea {imageFile} bind:showOriginal on:process={() => (controlsOpen = false)} />
 		</div>
 	{/if}
 </div>
+
