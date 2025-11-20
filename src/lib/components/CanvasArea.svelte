@@ -72,6 +72,7 @@
 			selectedPixel = { row, col };
 			colorPickerPos = { x: event.clientX, y: event.clientY };
 			showColorPicker = true;
+			drawCanvas();
 		}
 	}
 
@@ -83,6 +84,7 @@
 		if (newColorRgb) {
 			const { row, col } = selectedPixel;
 			pixelatedData[row][col] = newColorRgb;
+			selectedPixel = null;
 			drawCanvas();
 		}
 		showColorPicker = false;
@@ -247,6 +249,17 @@
 			pctx.lineTo(outputWidth, r * blockHeight);
 			pctx.stroke();
 		}
+
+		if (selectedPixel) {
+			pctx.strokeStyle = 'red';
+			pctx.lineWidth = BOLD_LINE_WIDTH;
+			pctx.strokeRect(
+				selectedPixel.col * blockWidth,
+				selectedPixel.row * blockHeight,
+				blockWidth,
+				blockHeight
+			);
+		}
 	}
 
 	function drawNumbering(
@@ -408,7 +421,11 @@
 		{colorToIdentifier}
 		symbolType={$symbolType}
 		on:select={changeColor}
-		on:close={() => (showColorPicker = false)}
+		on:close={() => {
+			showColorPicker = false;
+			selectedPixel = null;
+			drawCanvas();
+		}}
 	/>
 
 	<ColorPalette {colorCounts} {colorToIdentifier} symbolType={$symbolType} />
