@@ -37,6 +37,7 @@
 	let isSaveModalOpen = false;
 
 	let colorToIdentifier = new Map<string, string>();
+	let identifierToColor = new Map<string, string>();
 	let nextNumber = 1;
 	let nextLetter = 'A';
 
@@ -50,6 +51,8 @@
 	let showColorPicker = false;
 	let colorPickerPos = { x: 0, y: 0 };
 	let selectedPixel: { row: number; col: number } | null = null;
+	let inputBuffer = '';
+	let bufferTimeout: ReturnType<typeof setTimeout> | null = null;
 
 	function handleCanvasClick(event: MouseEvent) {
 		if (!isProcessed) return;
@@ -191,6 +194,11 @@
 			if ($symbolType !== 'ei mitään') {
 				getIdentifierForColor(hex, $symbolType);
 			}
+		}
+
+		identifierToColor.clear();
+		for (const [hex, identifier] of colorToIdentifier.entries()) {
+			identifierToColor.set(identifier, hex);
 		}
 
 		for (let r = 0; r < rows; r++) {
@@ -379,7 +387,104 @@
 	$: if (isProcessed && ($symbolType || $showColor || $borderColor)) {
 		drawCanvas();
 	}
+
+	function handleKeydown(event: KeyboardEvent) {
+		if (!selectedPixel) return;
+
+		const { key } = event;
+
+		if (key.startsWith('Arrow')) {
+			if (bufferTimeout) clearTimeout(bufferTimeout);
+			inputBuffer = '';
+
+			let { row, col } = selectedPixel;
+			const { rows, cols, blockWidth, blockHeight } = gridDimensions;
+
+			let moved = false;
+			if (key === 'ArrowUp') {
+				if (row > 0) {
+					row--;
+					moved = true;
+				}
+			} else if (key === 'ArrowDown') {
+				if (row < rows - 1) {
+					row++;
+					moved = true;
+				}
+			} else if (key === 'ArrowLeft') {
+				if (col > 0) {
+					col--;
+					moved = true;
+				}
+			} else if (key === 'ArrowRight') {
+				if (col < cols - 1) {
+					col++;
+					moved = true;
+				}
+			}
+
+			if (moved) {
+				event.preventDefault();
+				selectedPixel = { row, col };
+
+				const rect = processedCanvas.getBoundingClientRect();
+				const outputWidth = cols * blockWidth;
+				const outputHeight = rows * blockHeight;
+				const scaleX = outputWidth / rect.width;
+				const scaleY = outputHeight / rect.height;
+
+				const canvasX = col * blockWidth + blockWidth / 2;
+				const canvasY = row * blockHeight + blockHeight / 2;
+
+				colorPickerPos = {
+					x: canvasX / scaleX + rect.left,
+					y: canvasY / scaleY + rect.top
+				};
+
+				drawCanvas();
+			}
+		} else if (/^[a-zA-Z]$/.test(key)) {
+			event.preventDefault();
+			if (bufferTimeout) clearTimeout(bufferTimeout);
+			inputBuffer = '';
+
+			const pressedKey = key.toUpperCase();
+			if (identifierToColor.has(pressedKey)) {
+				const hex = identifierToColor.get(pressedKey);
+				if (hex) {
+					const newColorRgb = hexToRgb(hex);
+					if (newColorRgb) {
+						const { row, col } = selectedPixel;
+						pixelatedData[row][col] = newColorRgb;
+						drawCanvas();
+					}
+				}
+			}
+		} else if (/^\d$/.test(key)) {
+			event.preventDefault();
+			if (bufferTimeout) clearTimeout(bufferTimeout);
+			inputBuffer += key;
+
+			bufferTimeout = window.setTimeout(() => {
+				if (identifierToColor.has(inputBuffer)) {
+					const hex = identifierToColor.get(inputBuffer);
+					if (hex) {
+						const newColorRgb = hexToRgb(hex);
+						if (newColorRgb) {
+							const { row, col } = selectedPixel;
+							pixelatedData[row][col] = newColorRgb;
+							drawCanvas();
+						}
+					}
+				}
+				inputBuffer = '';
+				bufferTimeout = null;
+			}, 500);
+		}
+	}
 </script>
+
+<svelte:window on:keydown={handleKeydown} />
 
 <div class="flex flex-col items-center gap-4">
 	<CanvasControls
