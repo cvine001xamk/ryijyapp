@@ -25,6 +25,7 @@
 	import ResetIcon from '$lib/icons/ResetIcon.svelte';
 	import EyeIcon from '$lib/icons/EyeIcon.svelte';
 	import GridIcon from '$lib/icons/GridIcon.svelte';
+	import PostProcessSettings from './PostProcessSettings.svelte';
 
 	export let imageFile: File | null;
 	export let showOriginal = false;
@@ -649,6 +650,10 @@
 		<div class="flex items-center justify-center">
 			<div class="h-32 w-32 animate-spin rounded-full border-t-2 border-b-2 border-blue-500"></div>
 		</div>
+	{/if}
+
+	{#if isProcessed && !isLoading && !showOriginal}
+		<PostProcessSettings />
 	{/if}
 
 	<div class="w-full max-w-3xl">
