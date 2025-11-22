@@ -3,7 +3,7 @@
 	import { tuftWidth, tuftHeight, threadsPerKnot, wastage } from '$lib/stores/settingsStore';
 
 	export let isOpen: boolean;
-	export let onConfirm: () => void;
+	export let onConfirm: (format: 'pdf' | 'excel') => void;
 	export let onClose: () => void;
 
 	const threadOptions = [2, 3, 4];
@@ -84,10 +84,16 @@
 					Peruuta
 				</button>
 				<button
-					on:click={onConfirm}
+					on:click={() => onConfirm('pdf')}
 					class="rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
 				>
-					Luo tiedosto
+					Luo PDF
+				</button>
+				<button
+					on:click={() => onConfirm('excel')}
+					class="rounded-md bg-green-600 px-4 py-2 text-white hover:bg-green-700"
+				>
+					Luo Excel
 				</button>
 			</div>
 		</div>

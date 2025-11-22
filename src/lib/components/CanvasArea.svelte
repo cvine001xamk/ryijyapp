@@ -5,6 +5,7 @@
 	import { rgbToHex, getBrightness, hexToRgb } from '$lib/utils/helperFunctions';
 	import type { RGB } from '$lib/utils/helperFunctions';
 	import { generatePdf } from '$lib/utils/pdfGenerator';
+	import { generateExcel } from '$lib/utils/excelGenerator';
 	import CanvasControls from './CanvasControls.svelte';
 	import {
 		pixelSize,
@@ -390,8 +391,8 @@
 		isSaveModalOpen = true;
 	}
 
-	function confirmSave() {
-		generatePdf({
+	function confirmSave(format: 'pdf' | 'excel') {
+		const options = {
 			canvas: processedCanvas,
 			gridInfo,
 			colorCounts,
@@ -400,8 +401,16 @@
 			threadsPerKnot: $threadsPerKnot,
 			tuftWidth: $tuftWidth,
 			tuftHeight: $tuftHeight,
-			wastage: $wastage
-		});
+			wastage: $wastage,
+			pixelatedData,
+			aspectRatio: $aspectRatio
+		};
+
+		if (format === 'pdf') {
+			generatePdf(options);
+		} else {
+			generateExcel(options);
+		}
 		isSaveModalOpen = false;
 	}
 

@@ -37,6 +37,7 @@
 		"vite": "^7.1.10"
 	},
 	"dependencies": {
+		"exceljs": "^4.4.0",
 		"jspdf": "^3.0.3"
 	}
 }
