@@ -39,7 +39,7 @@
 
 	<div class="flex flex-col items-center">
 		<label for="colorAmountRange" class="mb-1 font-medium text-gray-700">
-			Värien määrä: {$colorAmount}
+			Tavoiteltu värien määrä: {$colorAmount}
 		</label>
 		<input
 			id="colorAmountRange"

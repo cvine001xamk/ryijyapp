@@ -20,7 +20,7 @@
 		tuftHeight,
 		wastage
 	} from '$lib/stores/settingsStore';
-	import { quantizeColors } from '$lib/utils/colorQuantization';
+	import { getPaletteFromImage, mapColorsToPalette } from '$lib/utils/colorQuantization';
 	import ColorPicker from './ColorPicker.svelte';
 	import SaveConfirmationModal from './SaveConfirmationModal.svelte';
 	import ResetIcon from '$lib/icons/ResetIcon.svelte';
@@ -360,26 +360,70 @@
 			gridInfo = `${cols} × ${rows} ruutua`;
 
 			const imageData = ctx.getImageData(0, 0, originalCanvas.width, originalCanvas.height);
-			const { quantizedPixels } = quantizeColors(imageData, $colorAmount);
+			
+			// 1. Get palette from original image (preserves exact colors if count is low)
+			const palette = getPaletteFromImage(imageData, $colorAmount);
 
-			pixelatedData = Array(rows)
-				.fill(null)
-				.map(() => Array(cols).fill(null));
+			// 2. Downsample: Calculate average color for each block
+			const blockColors: RGB[] = [];
+			const validBlocks: {r: number, c: number}[] = [];
 
 			for (let r = 0; r < rows; r++) {
 				for (let c = 0; c < cols; c++) {
 					const x = c * blockWidth;
 					const y = r * blockHeight;
-					const representativeX = Math.floor(x + blockWidth / 2);
-					const representativeY = Math.floor(y + blockHeight / 2);
-					const i = (representativeY * originalCanvas.width + representativeX) * 4;
-					pixelatedData[r][c] = {
-						r: quantizedPixels[i],
-						g: quantizedPixels[i + 1],
-						b: quantizedPixels[i + 2]
-					};
+					
+					let rSum = 0, gSum = 0, bSum = 0, count = 0;
+					
+					// Iterate over pixels in the block
+					for (let by = 0; by < blockHeight; by++) {
+						for (let bx = 0; bx < blockWidth; bx++) {
+							const pixelX = x + bx;
+							const pixelY = y + by;
+							
+							if (pixelX < originalCanvas.width && pixelY < originalCanvas.height) {
+								const i = (pixelY * originalCanvas.width + pixelX) * 4;
+								// Only consider non-transparent pixels
+								if (imageData.data[i + 3] > 0) {
+									rSum += imageData.data[i];
+									gSum += imageData.data[i + 1];
+									bSum += imageData.data[i + 2];
+									count++;
+								}
+							}
+						}
+					}
+
+					if (count > 0) {
+						blockColors.push({
+							r: Math.round(rSum / count),
+							g: Math.round(gSum / count),
+							b: Math.round(bSum / count)
+						});
+						validBlocks.push({r, c});
+					}
 				}
 			}
+
+			// 3. Map downsampled colors to the palette
+			const quantizedPixels = mapColorsToPalette(blockColors, palette);
+
+			// Update colorAmount to reflect the actual number of colors used
+			colorAmount.set(palette.length);
+
+			pixelatedData = Array(rows)
+				.fill(null)
+				.map(() => Array(cols).fill(null));
+
+			// 4. Map back to grid
+			for (let i = 0; i < validBlocks.length; i++) {
+				const { r, c } = validBlocks[i];
+				pixelatedData[r][c] = quantizedPixels[i];
+			}
+
+			gridInfo = `${cols} × ${rows} ruutua, ${palette.length} väriä`;
+
+			isProcessed = true;
 
 			isProcessed = true;
 			drawCanvas();
