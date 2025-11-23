@@ -31,7 +31,7 @@
 			<span class="mt-4 text-sm text-gray-500">Lataa kuva</span>
 		</label>
 	{:else}
-		<div class="rounded-2xl bg-white p-6 shadow-lg" transition:fade>
+		<div class="rounded-2xl bg-white p-2 shadow-lg sm:p-6" transition:fade>
 			<CollapsibleControls bind:isOpen={controlsOpen}>
 				<ImageControls bind:imageFile />
 				<PixelSettings />

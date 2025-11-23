@@ -222,35 +222,40 @@
 		pctx.translate(pan.x, pan.y);
 		pctx.scale(scale, scale);
 
-		for (let r = 0; r < rows; r++) {
-			for (let c = 0; c < cols; c++) {
-				const color = pixelatedData[r][c];
-				if (!color) continue;
+		if (showOriginal && img) {
+			// Draw original image scaled to fit the grid dimensions
+			pctx.drawImage(img, 0, 0, outputWidth, outputHeight);
+		} else {
+			for (let r = 0; r < rows; r++) {
+				for (let c = 0; c < cols; c++) {
+					const color = pixelatedData[r][c];
+					if (!color) continue;
 
-				const x = c * blockWidth;
-				const y = r * blockHeight;
-				const hex = rgbToHex(color.r, color.g, color.b);
+					const x = c * blockWidth;
+					const y = r * blockHeight;
+					const hex = rgbToHex(color.r, color.g, color.b);
 
-				pctx.fillStyle = $showColor ? `rgb(${color.r}, ${color.g}, ${color.b})` : 'white';
-				pctx.fillRect(x, y, blockWidth, blockHeight);
+					pctx.fillStyle = $showColor ? `rgb(${color.r}, ${color.g}, ${color.b})` : 'white';
+					pctx.fillRect(x, y, blockWidth, blockHeight);
 
-				if ($symbolType !== 'ei mitään') {
-					const identifier = colorToIdentifier.get(hex) || '';
-					if (!$showColor) {
-						pctx.fillStyle = 'black';
-					} else {
-						const brightness = getBrightness(color.r, color.g, color.b);
-						pctx.fillStyle = brightness > 128 ? 'black' : 'white';
+					if ($symbolType !== 'ei mitään') {
+						const identifier = colorToIdentifier.get(hex) || '';
+						if (!$showColor) {
+							pctx.fillStyle = 'black';
+						} else {
+							const brightness = getBrightness(color.r, color.g, color.b);
+							pctx.fillStyle = brightness > 128 ? 'black' : 'white';
+						}
+						pctx.font = `${Math.max(12, Math.min(blockWidth, blockHeight) * 0.5)}px Arial`;
+						pctx.textAlign = 'center';
+						pctx.textBaseline = 'middle';
+						pctx.fillText(identifier, x + blockWidth / 2, y + blockHeight / 2);
 					}
-					pctx.font = `${Math.max(12, Math.min(blockWidth, blockHeight) * 0.5)}px Arial`;
-					pctx.textAlign = 'center';
-					pctx.textBaseline = 'middle';
-					pctx.fillText(identifier, x + blockWidth / 2, y + blockHeight / 2);
 				}
 			}
+			drawGrid(pctx, rows, cols, blockWidth, blockHeight, outputWidth, outputHeight);
 		}
 
-		drawGrid(pctx, rows, cols, blockWidth, blockHeight, outputWidth, outputHeight);
 		pctx.restore();
 		drawNumbering(pctx, rows, cols, blockWidth, blockHeight, outputWidth, outputHeight);
 	}
@@ -464,7 +469,7 @@
 		drawCanvas();
 	}
 
-	$: if (isProcessed && ($symbolType || $showColor || $borderColor)) {
+	$: if (isProcessed && ($symbolType || $showColor || $borderColor || showOriginal !== undefined)) {
 		drawCanvas();
 	}
 
@@ -705,15 +710,17 @@
 		</div>
 	{/if}
 
-	{#if isProcessed && !isLoading && !showOriginal}
-		<PostProcessSettings />
+	{#if isProcessed && !isLoading}
+		<div class:invisible={showOriginal}>
+			<PostProcessSettings />
+		</div>
 	{/if}
 
 	<div class="w-full max-w-3xl">
 		<canvas
 			bind:this={processedCanvas}
 			class="w-full rounded border shadow"
-			class:hidden={showOriginal || isLoading}
+			class:hidden={isLoading}
 			on:click={handleCanvasClick}
 			on:wheel={handleWheel}
 			on:mousedown={handleMouseDown}
@@ -721,14 +728,6 @@
 			on:touchmove={handleTouchMove}
 			on:touchend={handleTouchEnd}
 		></canvas>
-		{#if img}
-			<img
-				src={img.src}
-				alt="Original"
-				class="w-full max-w-3xl rounded border shadow"
-				class:hidden={!showOriginal || isLoading}
-			/>
-		{/if}
 	</div>
 
 	{#if isProcessed && !isLoading}
