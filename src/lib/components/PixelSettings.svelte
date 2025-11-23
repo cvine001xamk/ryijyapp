@@ -16,6 +16,10 @@
 		return unsubscribe;
 	});
 
+	import { createEventDispatcher } from 'svelte';
+
+	const dispatch = createEventDispatcher();
+
 	$: if (internalColorAmount && internalColorAmount > $maxColors) {
 		colorAmount.set($maxColors);
 	}
@@ -62,4 +66,11 @@
 			<option value="1:3">1:3</option>
 		</select>
 	</div>
+
+	<button
+		on:click={() => dispatch('process')}
+		class="mt-4 h-15 w-40 rounded-lg bg-[#a4036f] px-4 py-2 text-white hover:opacity-90 disabled:bg-gray-300"
+	>
+		Muodosta kaavio
+	</button>
 </div>

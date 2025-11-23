@@ -6,7 +6,7 @@
 	import type { RGB } from '$lib/utils/helperFunctions';
 	import { generatePdf } from '$lib/utils/pdfGenerator';
 	import { generateExcel } from '$lib/utils/excelGenerator';
-	import CanvasControls from './CanvasControls.svelte';
+
 	import {
 		pixelSize,
 		borderColor,
@@ -50,6 +50,107 @@
 
 	let pixelatedData: (RGB | null)[][] = [];
 	let gridDimensions = { rows: 0, cols: 0, blockWidth: 0, blockHeight: 0 };
+	let cachedGridCanvas: HTMLCanvasElement | null = null;
+
+	function updateGridData() {
+		if (!isProcessed) return;
+		const { rows, cols } = gridDimensions;
+		
+		colorCounts = new Map();
+		const uniqueColors = new Set<string>();
+		
+		for (let r = 0; r < rows; r++) {
+			for (let c = 0; c < cols; c++) {
+				const color = pixelatedData[r][c];
+				if (!color) continue;
+				const hex = rgbToHex(color.r, color.g, color.b);
+				colorCounts.set(hex, (colorCounts.get(hex) || 0) + 1);
+				uniqueColors.add(hex);
+			}
+		}
+
+		const sortedColors = Array.from(uniqueColors).sort();
+		colorToIdentifier.clear();
+		nextNumber = 1;
+		nextLetter = 'A';
+		for (const hex of sortedColors) {
+			if ($symbolType !== 'ei mitään') {
+				getIdentifierForColor(hex, $symbolType);
+			}
+		}
+
+		identifierToColor.clear();
+		for (const [hex, identifier] of colorToIdentifier.entries()) {
+			identifierToColor.set(identifier, hex);
+		}
+	}
+
+	function renderGridToCache() {
+		if (!isProcessed) return;
+		
+		const { rows, cols, blockWidth, blockHeight } = gridDimensions;
+		const outputWidth = cols * blockWidth;
+		const outputHeight = rows * blockHeight;
+
+		if (!cachedGridCanvas) {
+			cachedGridCanvas = document.createElement('canvas');
+		}
+		
+		cachedGridCanvas.width = outputWidth;
+		cachedGridCanvas.height = outputHeight;
+		const ctx = cachedGridCanvas.getContext('2d');
+		if (!ctx) return;
+
+		// Draw background
+		ctx.fillStyle = 'white';
+		ctx.fillRect(0, 0, outputWidth, outputHeight);
+
+		// Draw pixels
+		for (let r = 0; r < rows; r++) {
+			for (let c = 0; c < cols; c++) {
+				const color = pixelatedData[r][c];
+				if (!color) continue;
+
+				const x = c * blockWidth;
+				const y = r * blockHeight;
+				const hex = rgbToHex(color.r, color.g, color.b);
+
+				ctx.fillStyle = $showColor ? `rgb(${color.r}, ${color.g}, ${color.b})` : 'white';
+				ctx.fillRect(x, y, blockWidth, blockHeight);
+
+				if ($symbolType !== 'ei mitään') {
+					const identifier = colorToIdentifier.get(hex) || '';
+					if (!$showColor) {
+						ctx.fillStyle = 'black';
+					} else {
+						const brightness = getBrightness(color.r, color.g, color.b);
+						ctx.fillStyle = brightness > 128 ? 'black' : 'white';
+					}
+					ctx.font = `${Math.max(12, Math.min(blockWidth, blockHeight) * 0.5)}px Arial`;
+					ctx.textAlign = 'center';
+					ctx.textBaseline = 'middle';
+					ctx.fillText(identifier, x + blockWidth / 2, y + blockHeight / 2);
+				}
+			}
+		}
+
+		// Draw grid lines
+		ctx.strokeStyle = $borderColor;
+		for (let c = 0; c <= cols; c++) {
+			ctx.lineWidth = c % 5 === 0 ? BOLD_LINE_WIDTH : NORMAL_LINE_WIDTH;
+			ctx.beginPath();
+			ctx.moveTo(c * blockWidth, 0);
+			ctx.lineTo(c * blockWidth, outputHeight);
+			ctx.stroke();
+		}
+		for (let r = 0; r <= rows; r++) {
+			ctx.lineWidth = (rows - r) % 5 === 0 ? BOLD_LINE_WIDTH : NORMAL_LINE_WIDTH;
+			ctx.beginPath();
+			ctx.moveTo(0, r * blockHeight);
+			ctx.lineTo(outputWidth, r * blockHeight);
+			ctx.stroke();
+		}
+	}
 
 	const NUMBER_FONT_SIZE = 12;
 	const BOLD_LINE_WIDTH = 3;
@@ -105,6 +206,8 @@
 			const { row, col } = selectedPixel;
 			pixelatedData[row][col] = newColorRgb;
 			selectedPixel = null;
+			updateGridData();
+			renderGridToCache();
 			drawCanvas();
 		}
 		showColorPicker = false;
@@ -201,36 +304,6 @@
 		processedCanvas.height = outputHeight + 30;
 		pctx.clearRect(0, 0, processedCanvas.width, processedCanvas.height);
 
-		if (isProcessed) {
-			colorCounts = new Map();
-			const uniqueColors = new Set<string>();
-			const { rows, cols } = gridDimensions;
-			for (let r = 0; r < rows; r++) {
-				for (let c = 0; c < cols; c++) {
-					const color = pixelatedData[r][c];
-					if (!color) continue;
-					const hex = rgbToHex(color.r, color.g, color.b);
-					colorCounts.set(hex, (colorCounts.get(hex) || 0) + 1);
-					uniqueColors.add(hex);
-				}
-			}
-
-			const sortedColors = Array.from(uniqueColors).sort();
-			colorToIdentifier.clear();
-			nextNumber = 1;
-			nextLetter = 'A';
-			for (const hex of sortedColors) {
-				if ($symbolType !== 'ei mitään') {
-					getIdentifierForColor(hex, $symbolType);
-				}
-			}
-
-			identifierToColor.clear();
-			for (const [hex, identifier] of colorToIdentifier.entries()) {
-				identifierToColor.set(identifier, hex);
-			}
-		}
-
 		pctx.save();
 		pctx.translate(pan.x, pan.y);
 		pctx.scale(scale, scale);
@@ -238,36 +311,21 @@
 		if (showOriginal && img) {
 			// Draw original image scaled to fit the grid dimensions
 			pctx.drawImage(img, 0, 0, outputWidth, outputHeight);
-		} else if (isProcessed) {
-			const { rows, cols, blockWidth, blockHeight } = gridDimensions;
-			for (let r = 0; r < rows; r++) {
-				for (let c = 0; c < cols; c++) {
-					const color = pixelatedData[r][c];
-					if (!color) continue;
-
-					const x = c * blockWidth;
-					const y = r * blockHeight;
-					const hex = rgbToHex(color.r, color.g, color.b);
-
-					pctx.fillStyle = $showColor ? `rgb(${color.r}, ${color.g}, ${color.b})` : 'white';
-					pctx.fillRect(x, y, blockWidth, blockHeight);
-
-					if ($symbolType !== 'ei mitään') {
-						const identifier = colorToIdentifier.get(hex) || '';
-						if (!$showColor) {
-							pctx.fillStyle = 'black';
-						} else {
-							const brightness = getBrightness(color.r, color.g, color.b);
-							pctx.fillStyle = brightness > 128 ? 'black' : 'white';
-						}
-						pctx.font = `${Math.max(12, Math.min(blockWidth, blockHeight) * 0.5)}px Arial`;
-						pctx.textAlign = 'center';
-						pctx.textBaseline = 'middle';
-						pctx.fillText(identifier, x + blockWidth / 2, y + blockHeight / 2);
-					}
-				}
+		} else if (isProcessed && cachedGridCanvas) {
+			pctx.drawImage(cachedGridCanvas, 0, 0);
+			
+			// Draw selection highlight on top
+			if (selectedPixel) {
+				const { blockWidth, blockHeight } = gridDimensions;
+				pctx.strokeStyle = 'white';
+				pctx.lineWidth = BOLD_LINE_WIDTH;
+				pctx.strokeRect(
+					selectedPixel.col * blockWidth,
+					selectedPixel.row * blockHeight,
+					blockWidth,
+					blockHeight
+				);
 			}
-			drawGrid(pctx, rows, cols, blockWidth, blockHeight, outputWidth, outputHeight);
 		}
 
 		pctx.restore();
@@ -349,7 +407,7 @@
 		}
 	}
 
-	function processImage(): void {
+	export function processImage(): void {
 		if (!img?.src || !isImageLoaded || isLoading) {
 			return;
 		}
@@ -449,6 +507,8 @@
 			isProcessed = true;
 
 			isProcessed = true;
+			updateGridData();
+			renderGridToCache();
 			drawCanvas();
 			isLoading = false;
 		}, 10);
@@ -488,6 +548,8 @@
 	}
 
 	$: if (isProcessed && ($symbolType || $showColor || $borderColor || showOriginal !== undefined)) {
+		updateGridData();
+		renderGridToCache();
 		drawCanvas();
 	}
 
@@ -712,15 +774,7 @@
 <svelte:window on:keydown={handleKeydown} on:mouseup={handleMouseUp} on:mousemove={handleMouseMove} />
 
 <div class="flex flex-col items-center gap-4">
-	<CanvasControls
-		{isImageLoaded}
-		on:process={() => {
-			processImage();
-			dispatch('process');
-		}}
-		on:save={save}
-		{isProcessed}
-	/>
+
 
 	{#if isLoading}
 		<div class="flex items-center justify-center">
@@ -799,7 +853,12 @@
 		}}
 	/>
 
-	<ColorPalette {colorCounts} {colorToIdentifier} symbolType={$symbolType} />
+	<ColorPalette
+		{colorCounts}
+		{colorToIdentifier}
+		symbolType={$symbolType}
+		on:save={save}
+	/>
 	<SaveConfirmationModal
 		isOpen={isSaveModalOpen}
 		onConfirm={confirmSave}

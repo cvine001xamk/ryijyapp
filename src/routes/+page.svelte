@@ -9,6 +9,12 @@
 	let imageFile: File | null = null;
 	let showOriginal = false;
 	let controlsOpen = true;
+	let canvasArea: CanvasArea;
+	
+	function handleProcess() {
+		canvasArea?.processImage();
+		controlsOpen = false;
+	}
 </script>
 
 <div class="container mx-auto mt-8 max-w-5xl text-center">
@@ -56,10 +62,9 @@
 		<div class="rounded-2xl bg-white p-2 shadow-lg sm:p-6" transition:fade>
 			<CollapsibleControls bind:isOpen={controlsOpen}>
 				<ImageControls bind:imageFile />
-				<PixelSettings />
+				<PixelSettings on:process={handleProcess} />
 			</CollapsibleControls>
-			<CanvasArea {imageFile} bind:showOriginal on:process={() => (controlsOpen = false)} />
+			<CanvasArea bind:this={canvasArea} {imageFile} bind:showOriginal />
 		</div>
 	{/if}
 </div>
-
