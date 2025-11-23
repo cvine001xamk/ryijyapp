@@ -22,7 +22,7 @@
 	<div class="mt-6 text-center">
 		<button
 			on:click={() => (show = !show)}
-			class="rounded-lg bg-blue-500 px-3 py-2 text-white shadow hover:bg-blue-600"
+			class="rounded-lg bg-[#a4036f] px-3 py-2 text-white shadow hover:opacity-90"
 		>
 			{show ? 'Piilota värit' : 'Näytä värit'} ({colorCounts.size})
 		</button>

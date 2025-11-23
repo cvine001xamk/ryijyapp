@@ -22,7 +22,7 @@
 
 {#if isOpen}
 	<div
-		class="fixed inset-0 z-50 min-h-screen overflow-y-auto bg-blue-200"
+		class="fixed inset-0 z-50 min-h-screen overflow-y-auto bg-[#b5c9c4]"
 		transition:fade={{ duration: 200 }}
 	>
 		<!-- Header -->
@@ -103,7 +103,7 @@
 										type="radio"
 										bind:group={saveFormat}
 										value={format}
-										class="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500"
+										class="h-4 w-4 border-gray-300 text-[#a4036f] focus:ring-[#a4036f]"
 									/>
 									<span class="text-sm text-gray-700">{format}</span>
 								</label>

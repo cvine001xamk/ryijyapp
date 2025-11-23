@@ -26,8 +26,8 @@
 	}
 </script>
 
-<div class="flex min-h-screen flex-col bg-gray-100">
-	<header class="bg-blue-200 shadow-md">
+<div class="flex min-h-screen flex-col bg-[#f1ece9]">
+	<header class="bg-[#b5c9c4] shadow-md">
 		<div class="mx-auto flex max-w-3xl items-center justify-between px-6 py-4">
 			<a
 				href="https://www.kasityoakatemia.fi/"
@@ -36,7 +36,7 @@
 				rel="noopener noreferrer"
 			>
 				<img
-					src="/logo.avif"
+					src="/logo_nobg.png"
 					alt="Käsityö Akatemia logo"
 					class="h-15 w-15 rounded object-contain"
 				/>

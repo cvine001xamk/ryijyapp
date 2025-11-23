@@ -85,7 +85,7 @@
 				</button>
 				<button
 					on:click={() => onConfirm('pdf')}
-					class="rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+					class="rounded-md bg-[#a4036f] px-4 py-2 text-white hover:opacity-90"
 				>
 					Luo PDF
 				</button>

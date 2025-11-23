@@ -13,7 +13,7 @@
 <div class="flex flex-wrap justify-center gap-3">
 	<button
 		on:click={() => dispatch('process')}
-		class="h-15 w-40 rounded-lg bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 disabled:bg-gray-300"
+		class="h-15 w-40 rounded-lg bg-[#a4036f] px-4 py-2 text-white hover:opacity-90 disabled:bg-gray-300"
 		disabled={!isImageLoaded}
 	>
 		Muodosta kaavio

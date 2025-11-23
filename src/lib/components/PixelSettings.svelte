@@ -33,7 +33,7 @@
 			min="10"
 			max="100"
 			bind:value={$pixelSize}
-			class="w-64 accent-blue-500"
+			class="w-64 accent-[#a4036f]"
 		/>
 	</div>
 
@@ -47,7 +47,7 @@
 			min="2"
 			max={$maxColors}
 			bind:value={$colorAmount}
-			class="w-64 accent-blue-500"
+			class="w-64 accent-[#a4036f]"
 			disabled={$maxColors <= 2}
 		/>
 	</div>

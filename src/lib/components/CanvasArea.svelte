@@ -172,6 +172,7 @@
 
 				isImageLoaded = true;
 				showOriginal = true;
+				drawCanvas();
 			};
 			img.src = e.target?.result as string;
 		};
@@ -179,43 +180,55 @@
 	}
 
 	function drawCanvas() {
-		if (!isProcessed) return;
+		if (!isProcessed && (!showOriginal || !img)) return;
 		const pctx = processedCanvas.getContext('2d');
 		if (!pctx) return;
 
-		const { rows, cols, blockWidth, blockHeight } = gridDimensions;
-		const outputWidth = cols * blockWidth;
-		const outputHeight = rows * blockHeight;
+		let outputWidth, outputHeight;
+
+		if (isProcessed) {
+			const { rows, cols, blockWidth, blockHeight } = gridDimensions;
+			outputWidth = cols * blockWidth;
+			outputHeight = rows * blockHeight;
+		} else if (img) {
+			outputWidth = img.width;
+			outputHeight = img.height;
+		} else {
+			return;
+		}
 
 		processedCanvas.width = outputWidth + 30;
 		processedCanvas.height = outputHeight + 30;
 		pctx.clearRect(0, 0, processedCanvas.width, processedCanvas.height);
 
-		colorCounts = new Map();
-		const uniqueColors = new Set<string>();
-		for (let r = 0; r < rows; r++) {
-			for (let c = 0; c < cols; c++) {
-				const color = pixelatedData[r][c];
-				if (!color) continue;
-				const hex = rgbToHex(color.r, color.g, color.b);
-				colorCounts.set(hex, (colorCounts.get(hex) || 0) + 1);
-				uniqueColors.add(hex);
+		if (isProcessed) {
+			colorCounts = new Map();
+			const uniqueColors = new Set<string>();
+			const { rows, cols } = gridDimensions;
+			for (let r = 0; r < rows; r++) {
+				for (let c = 0; c < cols; c++) {
+					const color = pixelatedData[r][c];
+					if (!color) continue;
+					const hex = rgbToHex(color.r, color.g, color.b);
+					colorCounts.set(hex, (colorCounts.get(hex) || 0) + 1);
+					uniqueColors.add(hex);
+				}
 			}
-		}
 
-		const sortedColors = Array.from(uniqueColors).sort();
-		colorToIdentifier.clear();
-		nextNumber = 1;
-		nextLetter = 'A';
-		for (const hex of sortedColors) {
-			if ($symbolType !== 'ei mitään') {
-				getIdentifierForColor(hex, $symbolType);
+			const sortedColors = Array.from(uniqueColors).sort();
+			colorToIdentifier.clear();
+			nextNumber = 1;
+			nextLetter = 'A';
+			for (const hex of sortedColors) {
+				if ($symbolType !== 'ei mitään') {
+					getIdentifierForColor(hex, $symbolType);
+				}
 			}
-		}
 
-		identifierToColor.clear();
-		for (const [hex, identifier] of colorToIdentifier.entries()) {
-			identifierToColor.set(identifier, hex);
+			identifierToColor.clear();
+			for (const [hex, identifier] of colorToIdentifier.entries()) {
+				identifierToColor.set(identifier, hex);
+			}
 		}
 
 		pctx.save();
@@ -225,7 +238,8 @@
 		if (showOriginal && img) {
 			// Draw original image scaled to fit the grid dimensions
 			pctx.drawImage(img, 0, 0, outputWidth, outputHeight);
-		} else {
+		} else if (isProcessed) {
+			const { rows, cols, blockWidth, blockHeight } = gridDimensions;
 			for (let r = 0; r < rows; r++) {
 				for (let c = 0; c < cols; c++) {
 					const color = pixelatedData[r][c];
@@ -257,7 +271,11 @@
 		}
 
 		pctx.restore();
-		drawNumbering(pctx, rows, cols, blockWidth, blockHeight, outputWidth, outputHeight);
+		
+		if (isProcessed) {
+			const { rows, cols, blockWidth, blockHeight } = gridDimensions;
+			drawNumbering(pctx, rows, cols, blockWidth, blockHeight, outputWidth, outputHeight);
+		}
 	}
 
 	function drawGrid(
@@ -706,7 +724,7 @@
 
 	{#if isLoading}
 		<div class="flex items-center justify-center">
-			<div class="h-32 w-32 animate-spin rounded-full border-t-2 border-b-2 border-blue-500"></div>
+			<div class="h-32 w-32 animate-spin rounded-full border-t-2 border-b-2 border-[#a4036f]"></div>
 		</div>
 	{/if}
 

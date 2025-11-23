@@ -13,23 +13,45 @@
 
 <div class="container mx-auto mt-8 max-w-5xl text-center">
 	{#if !imageFile}
-		<label
-			for="initialImageUpload"
-			class="group mx-auto flex h-64 w-64 cursor-pointer flex-col items-center justify-center rounded-full bg-white shadow-lg transition-all hover:shadow-xl"
-		>
-			<input
-				type="file"
-				id="initialImageUpload"
-				accept="image/*"
-				class="hidden"
-				on:change={(e) => {
-					const target = e.target as HTMLInputElement;
-					imageFile = target.files?.[0] ?? null;
-				}}
-			/>
-			<CameraIcon />
-			<span class="mt-4 text-sm text-gray-500">Lataa kuva</span>
-		</label>
+		<div class="flex flex-col items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
+			<div class="mb-10 text-center">
+				<h2 class="text-3xl font-extrabold text-gray-900 sm:text-4xl">
+					Muuta kuvasi ryijymalliksi
+				</h2>
+				<p class="mt-4 text-lg text-gray-600">
+					Lataa kuva ja luo siitä helposti selkeä ruutukaavio ja ohjeet.
+				</p>
+			</div>
+
+			<label
+				for="initialImageUpload"
+				class="group relative flex h-80 w-full max-w-lg cursor-pointer flex-col items-center justify-center rounded-3xl border-4 border-dashed border-[#b5c9c4] bg-white/50 shadow-sm transition-all duration-300 hover:border-[#a4036f] hover:bg-white hover:shadow-md"
+			>
+				<div class="flex flex-col items-center justify-center pb-6 pt-5">
+					<div
+						class="mb-4 rounded-full bg-[#f1ece9] p-4 transition-colors group-hover:bg-[#b5c9c4]/30"
+					>
+						<CameraIcon class="h-12 w-12 text-[#a4036f]" />
+					</div>
+					<p
+						class="mb-2 text-xl font-medium text-gray-700 transition-colors group-hover:text-[#a4036f]"
+					>
+						Lataa kuva
+					</p>
+					<p class="text-sm text-gray-500">PNG, JPG tai WEBP</p>
+				</div>
+				<input
+					type="file"
+					id="initialImageUpload"
+					accept="image/*"
+					class="hidden"
+					on:change={(e) => {
+						const target = e.target as HTMLInputElement;
+						imageFile = target.files?.[0] ?? null;
+					}}
+				/>
+			</label>
+		</div>
 	{:else}
 		<div class="rounded-2xl bg-white p-2 shadow-lg sm:p-6" transition:fade>
 			<CollapsibleControls bind:isOpen={controlsOpen}>
