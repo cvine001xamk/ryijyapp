@@ -43,7 +43,7 @@
 			</a>
 			<button on:click={resetAndNavigate} class="cursor-pointer text-center hover:opacity-80">
 				<h1 class="text-xl font-bold tracking-wide text-gray-800 sm:text-2xl md:text-3xl">
-					Ryijykaavion<br class="sm:hidden" /> luonti
+					Ryijykaaviokone
 				</h1>
 			</button>
 			<div class="flex items-center gap-4">

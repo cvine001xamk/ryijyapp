@@ -272,7 +272,7 @@
 
 		pctx.restore();
 		
-		if (isProcessed) {
+		if (isProcessed && scale === 1 && pan.x === 0 && pan.y === 0) {
 			const { rows, cols, blockWidth, blockHeight } = gridDimensions;
 			drawNumbering(pctx, rows, cols, blockWidth, blockHeight, outputWidth, outputHeight);
 		}
@@ -762,8 +762,8 @@
 				<button
 					on:click={handleResetView}
 					class="rounded-full bg-gray-200 p-2 text-gray-700 hover:bg-gray-300"
-					class:opacity-50={showOriginal}
-					disabled={showOriginal}
+					class:opacity-50={showOriginal || (scale === 1 && pan.x === 0 && pan.y === 0)}
+					disabled={showOriginal || (scale === 1 && pan.x === 0 && pan.y === 0)}
 					aria-label="Reset view"
 					title="Reset view"
 				>
