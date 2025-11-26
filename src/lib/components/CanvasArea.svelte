@@ -74,9 +74,8 @@
 		nextNumber = 1;
 		nextLetter = 'A';
 		for (const hex of sortedColors) {
-			if ($symbolType !== 'ei mitään') {
-				getIdentifierForColor(hex, $symbolType);
-			}
+			const type = $symbolType === 'ei mitään' ? 'numerot' : $symbolType;
+			getIdentifierForColor(hex, type);
 		}
 
 		identifierToColor.clear();
@@ -612,6 +611,7 @@
 				drawCanvas();
 			}
 		} else if (/^[a-zA-Z]$/.test(key)) {
+			if ($symbolType === 'ei mitään') return;
 			event.preventDefault();
 			if (bufferTimeout) clearTimeout(bufferTimeout);
 			inputBuffer = '';
@@ -621,14 +621,17 @@
 				const hex = identifierToColor.get(pressedKey);
 				if (hex) {
 					const newColorRgb = hexToRgb(hex);
-					if (newColorRgb) {
+					if (newColorRgb && selectedPixel) {
 						const { row, col } = selectedPixel;
 						pixelatedData[row][col] = newColorRgb;
+						updateGridData();
+						renderGridToCache();
 						drawCanvas();
 					}
 				}
 			}
 		} else if (/^\d$/.test(key)) {
+			if ($symbolType === 'ei mitään') return;
 			event.preventDefault();
 			if (bufferTimeout) clearTimeout(bufferTimeout);
 			inputBuffer += key;
@@ -642,9 +645,11 @@
 				const hex = identifierToColor.get(buffer);
 				if (hex) {
 					const newColorRgb = hexToRgb(hex);
-					if (newColorRgb) {
+					if (newColorRgb && selectedPixel) {
 						const { row, col } = selectedPixel;
 						pixelatedData[row][col] = newColorRgb;
+						updateGridData();
+						renderGridToCache();
 						drawCanvas();
 					}
 				}
@@ -654,7 +659,7 @@
 				applyColorChange(inputBuffer);
 				inputBuffer = '';
 			} else if (isFullMatch || isPrefix) {
-				bufferTimeout = window.setTimeout(() => {
+				bufferTimeout = setTimeout(() => {
 					if (identifierToColor.has(inputBuffer)) {
 						applyColorChange(inputBuffer);
 					}
