@@ -3,7 +3,8 @@
 		pixelSize,
 		aspectRatio,
 		colorAmount,
-		maxColors
+		maxColors,
+		grayscale
 	} from '$lib/stores/settingsStore';
 	import { onMount } from 'svelte';
 
@@ -65,6 +66,18 @@
 			<option value="1:2">1:2</option>
 			<option value="1:3">1:3</option>
 		</select>
+	</div>
+
+	<div class="flex items-center gap-2">
+		<input
+			type="checkbox"
+			id="grayscaleCheckbox"
+			bind:checked={$grayscale}
+			class="h-5 w-5 rounded border-gray-300 text-[#a4036f] focus:ring-[#a4036f]"
+		/>
+		<label for="grayscaleCheckbox" class="font-medium text-gray-700">
+			Harmaasävyt
+		</label>
 	</div>
 
 	<button

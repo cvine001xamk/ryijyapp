@@ -11,3 +11,4 @@ export const threadsPerKnot = writable<number>(3);
 export const tuftWidth = writable<number>(1.0);
 export const tuftHeight = writable<number>(1.0);
 export const wastage = writable<number>(20);
+export const grayscale = writable(false);

@@ -18,7 +18,8 @@
 		threadsPerKnot,
 		tuftWidth,
 		tuftHeight,
-		wastage
+		wastage,
+		grayscale
 	} from '$lib/stores/settingsStore';
 	import { getPaletteFromImage, mapColorsToPalette } from '$lib/utils/colorQuantization';
 	import ColorPicker from './ColorPicker.svelte';
@@ -441,6 +442,18 @@
 
 			const imageData = ctx.getImageData(0, 0, originalCanvas.width, originalCanvas.height);
 			
+			if ($grayscale) {
+				for (let i = 0; i < imageData.data.length; i += 4) {
+					const r = imageData.data[i];
+					const g = imageData.data[i + 1];
+					const b = imageData.data[i + 2];
+					const gray = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
+					imageData.data[i] = gray;
+					imageData.data[i + 1] = gray;
+					imageData.data[i + 2] = gray;
+				}
+			}
+
 			// 1. Get palette from original image (preserves exact colors if count is low)
 			const palette = getPaletteFromImage(imageData, $colorAmount);
 
