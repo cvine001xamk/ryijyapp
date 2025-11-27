@@ -697,8 +697,14 @@
 		const delta = -event.deltaY;
 		const oldScale = scale;
 
-		scale += delta > 0 ? zoomIntensity : -zoomIntensity;
-		scale = Math.max(0.5, Math.min(scale, 5)); // Clamp scale
+		let newScale = scale + (delta > 0 ? zoomIntensity : -zoomIntensity);
+
+		if (newScale < 1) {
+			handleResetView();
+			return;
+		}
+
+		scale = Math.max(1, Math.min(newScale, 5)); // Clamp scale, min 1
 
 		const rect = processedCanvas.getBoundingClientRect();
 		const mouseX = event.clientX - rect.left;
@@ -762,8 +768,14 @@
 			lastTouchDistance = newTouchDistance;
 
 			const oldScale = scale;
-			scale += delta * 0.01; // Adjust sensitivity
-			scale = Math.max(0.5, Math.min(scale, 5));
+			let newScale = scale + delta * 0.01; // Adjust sensitivity
+			
+			if (newScale < 1) {
+				handleResetView();
+				return;
+			}
+
+			scale = Math.max(1, Math.min(newScale, 5));
 
 			const rect = processedCanvas.getBoundingClientRect();
 			const touchCenterX = (event.touches[0].clientX + event.touches[1].clientX) / 2 - rect.left;
