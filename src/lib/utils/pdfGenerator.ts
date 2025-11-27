@@ -130,5 +130,13 @@ export function generatePdf(options: PdfGeneratorOptions): void {
 	pdf.text(`Lankojen määrä per nukka: ${threadsPerKnot}`, 20, yPosition);
 
 	// Save the PDF
-	pdf.save('ryijykaavio.pdf');
+	const pdfOutput = pdf.output('blob');
+	const url = window.URL.createObjectURL(pdfOutput);
+	const a = document.createElement('a');
+	a.href = url;
+	a.download = 'ryijykaavio.pdf';
+	document.body.appendChild(a);
+	a.click();
+	document.body.removeChild(a);
+	window.URL.revokeObjectURL(url);
 }

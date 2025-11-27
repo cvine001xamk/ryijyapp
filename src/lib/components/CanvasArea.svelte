@@ -43,6 +43,7 @@
 	let isProcessed = false;
 	let isLoading = false;
 	let isSaveModalOpen = false;
+	let imageUrl: string | null = null;
 
 	let colorToIdentifier = new Map<string, string>();
 	let identifierToColor = new Map<string, string>();
@@ -242,6 +243,7 @@
 		colorCounts = new Map();
 		colorToIdentifier = new Map();
 		pixelatedData = [];
+		imageUrl = null;
 		const pctx = processedCanvas?.getContext('2d');
 		if (pctx) {
 			pctx.clearRect(0, 0, processedCanvas.width, processedCanvas.height);
@@ -249,35 +251,38 @@
 
 		const reader = new FileReader();
 		reader.onload = (e) => {
-			if (!img) img = new Image();
-			img.onload = () => {
-				if (!originalCanvas) return;
-				const ctx = originalCanvas.getContext('2d');
-				if (!ctx) return;
+			if (e.target?.result) {
+				imageUrl = e.target.result as string;
+				if (!img) img = new Image();
+				img.onload = () => {
+					if (!originalCanvas) return;
+					const ctx = originalCanvas.getContext('2d');
+					if (!ctx) return;
 
-				originalCanvas.width = img!.width;
-				originalCanvas.height = img!.height;
-				ctx.drawImage(img!, 0, 0);
+					originalCanvas.width = img!.width;
+					originalCanvas.height = img!.height;
+					ctx.drawImage(img!, 0, 0);
 
-				const imageData = ctx.getImageData(0, 0, originalCanvas.width, originalCanvas.height);
-				const uniqueColors = new Set<string>();
-				for (let i = 0; i < imageData.data.length; i += 4) {
-					if (imageData.data[i + 3] > 0) {
-						uniqueColors.add(
-							`${imageData.data[i]},${imageData.data[i + 1]},${imageData.data[i + 2]}`
-						);
+					const imageData = ctx.getImageData(0, 0, originalCanvas.width, originalCanvas.height);
+					const uniqueColors = new Set<string>();
+					for (let i = 0; i < imageData.data.length; i += 4) {
+						if (imageData.data[i + 3] > 0) {
+							uniqueColors.add(
+								`${imageData.data[i]},${imageData.data[i + 1]},${imageData.data[i + 2]}`
+							);
+						}
 					}
-				}
-				const newMaxColors = Math.min(uniqueColors.size, 30);
-				maxColors.set(newMaxColors);
-				// Only update colorAmount if the current value is greater than the new maximum
-				colorAmount.update((currentAmount) => Math.min(currentAmount, newMaxColors));
+					const newMaxColors = Math.min(uniqueColors.size, 30);
+					maxColors.set(newMaxColors);
+					// Only update colorAmount if the current value is greater than the new maximum
+					colorAmount.update((currentAmount) => Math.min(currentAmount, newMaxColors));
 
-				isImageLoaded = true;
-				showOriginal = true;
-				drawCanvas();
-			};
-			img.src = e.target?.result as string;
+					isImageLoaded = true;
+					showOriginal = true;
+					// drawCanvas(); // No need to draw canvas initially
+				};
+				img.src = e.target.result as string;
+			}
 		};
 		reader.readAsDataURL(file);
 	}
@@ -807,10 +812,14 @@
 	{/if}
 
 	<div class="w-full max-w-3xl">
+		{#if !isProcessed && imageUrl}
+			<img src={imageUrl} alt="Uploaded" class="w-full rounded border shadow" />
+		{/if}
+		
 		<canvas
 			bind:this={processedCanvas}
 			class="w-full rounded border shadow"
-			class:hidden={isLoading}
+			class:hidden={!isProcessed || isLoading}
 			on:click={handleCanvasClick}
 			on:wheel={handleWheel}
 			on:mousedown={handleMouseDown}
