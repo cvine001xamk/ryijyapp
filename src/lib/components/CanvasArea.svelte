@@ -713,6 +713,7 @@
 		pan.x = mouseX - (mouseX - pan.x) * (scale / oldScale);
 		pan.y = mouseY - (mouseY - pan.y) * (scale / oldScale);
 
+		constrainPan();
 		drawCanvas();
 	}
 
@@ -733,6 +734,7 @@
 
 			pan.x += dx;
 			pan.y += dy;
+			constrainPan();
 			drawCanvas();
 		}
 	}
@@ -784,6 +786,7 @@
 			pan.x = touchCenterX - (touchCenterX - pan.x) * (scale / oldScale);
 			pan.y = touchCenterY - (touchCenterY - pan.y) * (scale / oldScale);
 
+			constrainPan();
 			drawCanvas();
 		} else if (isPanning && event.touches.length === 1) {
 			const dx = event.touches[0].clientX - lastPanPosition.x;
@@ -792,7 +795,46 @@
 
 			pan.x += dx;
 			pan.y += dy;
+			constrainPan();
 			drawCanvas();
+		}
+	}
+
+	function constrainPan() {
+		if (!processedCanvas) return;
+
+		let outputWidth, outputHeight;
+		if (isProcessed) {
+			const { cols, blockWidth, rows, blockHeight } = gridDimensions;
+			outputWidth = cols * blockWidth;
+			outputHeight = rows * blockHeight;
+		} else if (img) {
+			outputWidth = img.width;
+			outputHeight = img.height;
+		} else {
+			return;
+		}
+
+		const viewportW = processedCanvas.width;
+		const viewportH = processedCanvas.height;
+		const contentW = outputWidth * scale;
+		const contentH = outputHeight * scale;
+		const margin = 50;
+
+		if (contentW < viewportW - 2 * margin) {
+			pan.x = Math.max(pan.x, margin);
+			pan.x = Math.min(pan.x, viewportW - contentW - margin);
+		} else {
+			pan.x = Math.min(pan.x, margin);
+			pan.x = Math.max(pan.x, viewportW - contentW - margin);
+		}
+
+		if (contentH < viewportH - 2 * margin) {
+			pan.y = Math.max(pan.y, margin);
+			pan.y = Math.min(pan.y, viewportH - contentH - margin);
+		} else {
+			pan.y = Math.min(pan.y, margin);
+			pan.y = Math.max(pan.y, viewportH - contentH - margin);
 		}
 	}
 
