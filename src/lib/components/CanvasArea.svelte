@@ -6,6 +6,7 @@
 	import type { RGB } from '$lib/utils/helperFunctions';
 	import { generatePdf } from '$lib/utils/pdfGenerator';
 	import { generateExcel } from '$lib/utils/excelGenerator';
+	import { generatePng } from '$lib/utils/pngGenerator';
 
 	import {
 		pixelSize,
@@ -363,7 +364,7 @@
 			pctx.beginPath();
 			pctx.moveTo(0, r * blockHeight);
 			pctx.lineTo(outputWidth, r * blockHeight);
-			pctx.stroke();
+			ctx.stroke();
 		}
 
 		if (selectedPixel) {
@@ -535,7 +536,7 @@
 		isSaveModalOpen = true;
 	}
 
-	function confirmSave(format: 'pdf' | 'excel') {
+	function confirmSave(format: 'pdf' | 'excel' | 'png') {
 		const options = {
 			canvas: processedCanvas,
 			gridInfo,
@@ -552,8 +553,10 @@
 
 		if (format === 'pdf') {
 			generatePdf(options);
-		} else {
+		} else if (format === 'excel') {
 			generateExcel(options);
+		} else {
+			generatePng(options);
 		}
 		isSaveModalOpen = false;
 	}

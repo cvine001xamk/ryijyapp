@@ -3,7 +3,7 @@
 	import { tuftWidth, tuftHeight, threadsPerKnot, wastage } from '$lib/stores/settingsStore';
 
 	export let isOpen: boolean;
-	export let onConfirm: (format: 'pdf' | 'excel') => void;
+	export let onConfirm: (format: 'pdf' | 'excel' | 'png') => void;
 	export let onClose: () => void;
 
 	const threadOptions = [2, 3, 4];
@@ -14,6 +14,9 @@
 		class="fixed inset-0 z-50 flex min-h-screen items-center justify-center overflow-y-auto bg-black/50"
 		transition:fade={{ duration: 150 }}
 		on:click|self={onClose}
+		on:keydown={(e) => { if (e.key === 'Escape') onClose(); }}
+		role="button"
+		tabindex="0"
 	>
 		<div class="w-full max-w-md rounded-xl bg-white p-6 shadow-lg">
 			<h2 class="mb-4 text-xl font-semibold text-gray-800">Vahvista ja säädä</h2>
@@ -94,6 +97,12 @@
 					class="rounded-md bg-green-600 px-4 py-2 text-white hover:bg-green-700"
 				>
 					Luo Excel
+				</button>
+				<button
+					on:click={() => onConfirm('png')}
+					class="rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+				>
+					Luo PNG
 				</button>
 			</div>
 		</div>
