@@ -154,7 +154,19 @@
 		}
 	}
 
-	const NUMBER_FONT_SIZE = 12;
+	function getResponsiveFontSize(): number {
+		// Base font size is 12px at 1024px viewport width
+		// Scales between 10px (at 320px) and 18px (at 1920px)
+		const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1024;
+		const minSize = 10;
+		const maxSize = 18;
+		const minViewport = 320;
+		const maxViewport = 1920;
+		
+		const size = minSize + ((viewportWidth - minViewport) / (maxViewport - minViewport)) * (maxSize - minSize);
+		return Math.max(minSize, Math.min(maxSize, size));
+	}
+	
 	const BOLD_LINE_WIDTH = 3;
 	const NORMAL_LINE_WIDTH = 0.8;
 
@@ -364,7 +376,7 @@
 			pctx.beginPath();
 			pctx.moveTo(0, r * blockHeight);
 			pctx.lineTo(outputWidth, r * blockHeight);
-			ctx.stroke();
+			pctx.stroke();
 		}
 
 		if (selectedPixel) {
@@ -388,8 +400,9 @@
 		outputWidth: number,
 		outputHeight: number
 	) {
+		const fontSize = getResponsiveFontSize();
 		pctx.fillStyle = 'black';
-		pctx.font = `${NUMBER_FONT_SIZE}px Arial`;
+		pctx.font = `${fontSize}px Arial`;
 		pctx.textAlign = 'center';
 		pctx.textBaseline = 'top';
 
