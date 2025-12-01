@@ -55,7 +55,7 @@
 					on:keydown={handleKeydown}
 					disabled={isSubmitting}
 					placeholder="Syötä avain"
-					class="w-full rounded-lg border-2 border-gray-300 p-3 text-gray-700 transition-colors focus:border-[#a4036f] focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+					class="w-full rounded-lg border-2 border-gray-300 p-3 text-gray-700 transition-colors focus:border-[#a4036f] focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-100"
 				/>
 				{#if error}
 					<p class="text-sm text-red-600" transition:fade={{ duration: 150 }}>
@@ -74,9 +74,7 @@
 		</div>
 
 		<div class="mt-6 text-center">
-			<p class="text-xs text-gray-500">
-				Tarvitsetko avaimen? Ota yhteyttä ylläpitoon.
-			</p>
+			<p class="text-xs text-gray-500">Tarvitsetko avaimen? Ota yhteyttä ylläpitoon.</p>
 		</div>
 	</div>
 </div>

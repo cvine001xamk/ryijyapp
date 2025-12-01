@@ -5,6 +5,7 @@
 	import Menu from '$lib/components/Menu.svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
+	import { onMount } from 'svelte';
 
 	let isMenuOpen = false;
 
@@ -24,6 +25,20 @@
 			await goto('/', { replaceState: true });
 		}
 	}
+
+	// Register service worker for PWA
+	onMount(() => {
+		if ('serviceWorker' in navigator) {
+			navigator.serviceWorker
+				.register('/sw.js')
+				.then((registration) => {
+					console.log('Service Worker registered:', registration);
+				})
+				.catch((error) => {
+					console.error('Service Worker registration failed:', error);
+				});
+		}
+	});
 </script>
 
 <div class="flex min-h-screen flex-col bg-[#f1ece9]">
