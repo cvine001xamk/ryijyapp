@@ -520,8 +520,7 @@
 			// 3. Map downsampled colors to the palette
 			const quantizedPixels = mapColorsToPalette(blockColors, palette);
 
-			// Update colorAmount to reflect the actual number of colors used
-			colorAmount.set(palette.length);
+
 
 			pixelatedData = Array(rows)
 				.fill(null)
@@ -533,12 +532,15 @@
 				pixelatedData[r][c] = quantizedPixels[i];
 			}
 
-			gridInfo = `${cols} × ${rows} ruutua, ${palette.length} väriä`;
+
 
 			isProcessed = true;
 
-			isProcessed = true;
+
 			updateGridData();
+			// Update colorAmount and gridInfo to reflect the actual number of colors used
+			colorAmount.set(colorCounts.size);
+			gridInfo = `${cols} × ${rows} ruutua, ${colorCounts.size} väriä`;
 			renderGridToCache();
 			drawCanvas();
 			isLoading = false;
